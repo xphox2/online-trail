@@ -250,6 +250,19 @@ func (s *Server) AddClient(c *Client, roomID string) {
 			room.status = StatusPlaying
 		}
 
+		// In continuous mode, new players joining mid-game start a fresh journey
+		// Reset progression but preserve loot sites on the trail
+		if room.roomType == RoomTypeContinuous && room.game.TurnNumber > 0 {
+			room.game.Mileage = 0
+			room.game.DistanceTraveled = 0
+			room.game.Week = 1
+			room.game.Day = 1
+			initRoomResources(room)
+			room.status = StatusPlaying
+			room.game.TurnPhase = game.PhaseMainMenu
+			log.Printf("Continuous room %s: fresh journey started for new player %s", roomID, c.Name)
+		}
+
 	}
 
 	if room.game.GetCurrentPlayer() == nil && len(room.game.Players) > 0 {
