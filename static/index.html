@@ -1934,7 +1934,6 @@
             <p id="game-over-message"></p>
             <div class="btn-row">
                 <button class="join-btn" onclick="resetGame()">New Journey</button>
-                <button class="join-btn hidden" id="gameover-rejoin" onclick="logout()">Play Again</button>
                 <button class="join-btn" onclick="logout()" style="background: linear-gradient(180deg, #8B4513 0%, #5C3317 100%); border-color: #DAA520;">Logout</button>
             </div>
             <div id="gameover-leaderboard" class="leaderboard hidden"></div>
@@ -3474,18 +3473,6 @@
                     'Your party did not survive the journey.<br><br>'
                     + 'You reached ' + Math.floor(state.mileage) + ' miles.<br><br>'
                     + 'Better luck next time, pioneer.';
-            }
-
-            // In continuous mode, only show "New Journey" if someone won
-            // Show "Play Again" (logout + rejoin) on continuous losses instead
-            var resetBtn = document.querySelector('#game-over .btn-row .join-btn[onclick="resetGame()"]');
-            var rejoinBtn = document.getElementById('gameover-rejoin');
-            if (state.room_type === 'continuous' && !state.win) {
-                if (resetBtn) resetBtn.style.display = 'none';
-                if (rejoinBtn) rejoinBtn.classList.remove('hidden');
-            } else {
-                if (resetBtn) resetBtn.style.display = '';
-                if (rejoinBtn) rejoinBtn.classList.add('hidden');
             }
 
             loadLeaderboard('gameover-leaderboard');

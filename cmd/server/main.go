@@ -249,6 +249,7 @@ func (s *Server) AddClient(c *Client, roomID string) {
 			initRoomResources(room)
 			room.status = StatusPlaying
 		}
+
 	}
 
 	if room.game.GetCurrentPlayer() == nil && len(room.game.Players) > 0 {
@@ -277,17 +278,6 @@ func (s *Server) RemoveClient(clientID string, roomID string) {
 		}
 		log.Printf("Player %s disconnected from %s", c.Name, roomID)
 
-		// Auto-reset continuous room when last player leaves after a loss
-		// Preserve loot wagons so they carry over to the next game
-		if room.roomType == RoomTypeContinuous && len(room.clients) == 0 && room.game.GameOver && !room.game.Win {
-			savedLoot := room.game.LootSites
-			s.CancelTurnTimer(room)
-			room.game.ResetGame()
-			room.game.LootSites = savedLoot
-			room.status = StatusWaiting
-			room.deadPlayers = make(map[string]bool)
-			log.Printf("Continuous room %s auto-reset after all players disconnected (loss), preserved %d loot sites", roomID, len(savedLoot))
-		}
 	}
 }
 
@@ -345,17 +335,6 @@ func (s *Server) LogoutClient(clientID, sessionID string, roomID string) {
 		}
 		log.Printf("Player %s logged out of %s", c.Name, roomID)
 
-		// Auto-reset continuous room when last player leaves after a loss
-		// Preserve loot wagons so they carry over to the next game
-		if room.roomType == RoomTypeContinuous && len(room.clients) == 0 && room.game.GameOver && !room.game.Win {
-			savedLoot := room.game.LootSites
-			s.CancelTurnTimer(room)
-			room.game.ResetGame()
-			room.game.LootSites = savedLoot
-			room.status = StatusWaiting
-			room.deadPlayers = make(map[string]bool)
-			log.Printf("Continuous room %s auto-reset after all players left (loss), preserved %d loot sites", roomID, len(savedLoot))
-		}
 	}
 
 	s.sessionManager.InvalidateSession(sessionID)
@@ -571,6 +550,12 @@ const fortInterval = 3 // trade post appears every N turns
 // NOTE: caller must hold room.mu.
 func (s *Server) advanceTurnAndCheckFort(room *GameRoom) bool {
 	room.game.NextTurn()
+
+	// In continuous mode, never end the game on a loss
+	if room.roomType == RoomTypeContinuous && room.game.GameOver && !room.game.Win {
+		room.game.GameOver = false
+	}
+
 	np := room.game.GetCurrentPlayer()
 	if np == nil || !np.Alive || room.game.GameOver {
 		return false
@@ -639,18 +624,24 @@ func (s *Server) handleTurnTimeout(room *GameRoom, expectedPlayerID string) {
 	room.game.TurnPhase = game.PhaseMainMenu
 
 	if room.game.GameOver {
-		modeLabel := "continuous"
-		if room.roomType == RoomTypeScheduled {
-			modeLabel = "party"
-		}
-		// Add all players to leaderboard
-		for _, cl := range room.clients {
-			if cl.Player != nil {
-				s.leaderboard.AddEntry(cl.Name, room.game.Win, room.game.Mileage, room.game.TurnNumber, modeLabel)
+		// In continuous mode, the game only truly ends on a win
+		if room.roomType == RoomTypeContinuous && !room.game.Win {
+			room.game.GameOver = false
+			log.Printf("Continuous room: player timed out and all dead, game continues waiting for new players")
+		} else {
+			modeLabel := "continuous"
+			if room.roomType == RoomTypeScheduled {
+				modeLabel = "party"
 			}
+			// Add all players to leaderboard
+			for _, cl := range room.clients {
+				if cl.Player != nil {
+					s.leaderboard.AddEntry(cl.Name, room.game.Win, room.game.Mileage, room.game.TurnNumber, modeLabel)
+				}
+			}
+			room.status = StatusFinished
+			room.turnDeadline = time.Time{}
 		}
-		room.status = StatusFinished
-		room.turnDeadline = time.Time{}
 	} else {
 		s.advanceTurnAndCheckFort(room)
 	}
@@ -815,38 +806,25 @@ func (s *Server) HandleAction(clientID string, roomID string, action string) str
 	}
 
 	if room.game.GameOver {
-		modeLabel := "continuous"
-		if room.roomType == RoomTypeScheduled {
-			modeLabel = "party"
-		}
-		// Add all players to leaderboard
-		for _, cl := range room.clients {
-			if cl.Player != nil {
-				s.leaderboard.AddEntry(cl.Name, room.game.Win, room.game.Mileage, room.game.TurnNumber, modeLabel)
+		// In continuous mode, the game only truly ends on a win
+		if room.roomType == RoomTypeContinuous && !room.game.Win {
+			room.game.GameOver = false
+			log.Printf("Continuous room: all players dead, game continues waiting for new players")
+		} else {
+			modeLabel := "continuous"
+			if room.roomType == RoomTypeScheduled {
+				modeLabel = "party"
 			}
-		}
-
-		// Create loot sites for all dead players in continuous mode
-		if room.roomType == RoomTypeContinuous {
+			// Add all players to leaderboard
 			for _, cl := range room.clients {
-				if cl.Player != nil && !cl.Player.Alive {
-					// Check if loot already exists for this player
-					hasLoot := false
-					for _, site := range room.game.LootSites {
-						if site.PlayerName == cl.Name && !site.IsLooted {
-							hasLoot = true
-							break
-						}
-					}
-					if !hasLoot {
-						s.createLootSite(room, cl)
-					}
+				if cl.Player != nil {
+					s.leaderboard.AddEntry(cl.Name, room.game.Win, room.game.Mileage, room.game.TurnNumber, modeLabel)
 				}
 			}
-		}
 
-		room.status = StatusFinished
-		s.CancelTurnTimer(room)
+			room.status = StatusFinished
+			s.CancelTurnTimer(room)
+		}
 	} else if room.game.TurnPhase != game.PhaseFort &&
 		room.game.TurnPhase != game.PhaseHunting &&
 		room.game.TurnPhase != game.PhaseRiders {
