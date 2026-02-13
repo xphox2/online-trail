@@ -1743,6 +1743,7 @@
             <div class="spectator-banner hidden" id="spectator-banner">
                 YOUR PARTY HAS PERISHED - You are now spectating
                 <div class="spectator-subtitle" id="spectator-subtitle"></div>
+                <button class="join-btn hidden" id="spectator-rejoin" onclick="logout()" style="margin-top:8px;padding:6px 18px;font-size:14px;">Play Again</button>
             </div>
 
             <div class="game-status" id="game-status">
@@ -2942,7 +2943,14 @@
             if (myPlayerDead && !state.game_over) {
                 spectatorBanner.classList.remove('hidden');
                 var subtitle = document.getElementById('spectator-subtitle');
-                subtitle.textContent = 'Your party perished at mile ' + Math.floor(state.mileage) + '. You can still watch and chat.';
+                var rejoinBtn = document.getElementById('spectator-rejoin');
+                if (state.room_type === 'continuous') {
+                    subtitle.textContent = 'Your party perished at mile ' + Math.floor(state.mileage) + '. You can play again or keep spectating.';
+                    rejoinBtn.classList.remove('hidden');
+                } else {
+                    subtitle.textContent = 'Your party perished at mile ' + Math.floor(state.mileage) + '. You can still watch and chat.';
+                    rejoinBtn.classList.add('hidden');
+                }
                 // Show death notification card once
                 if (wasAlive) {
                     addCard('death', 'You Have Fallen', 'skull', [
@@ -3465,6 +3473,15 @@
                     'Your party did not survive the journey.<br><br>'
                     + 'You reached ' + Math.floor(state.mileage) + ' miles.<br><br>'
                     + 'Better luck next time, pioneer.';
+            }
+
+            // In continuous mode, only show "New Journey" if someone won
+            if (state.room_type === 'continuous' && !state.win) {
+                var resetBtn = document.querySelector('#game-over .btn-row .join-btn[onclick="resetGame()"]');
+                if (resetBtn) resetBtn.style.display = 'none';
+            } else {
+                var resetBtn = document.querySelector('#game-over .btn-row .join-btn[onclick="resetGame()"]');
+                if (resetBtn) resetBtn.style.display = '';
             }
 
             loadLeaderboard('gameover-leaderboard');
