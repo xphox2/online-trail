@@ -1,0 +1,3474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Online Trail</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(180deg, #87CEEB 0%, #E0D6C6 50%, #8B7355 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        h1 {
+            text-align: center;
+            color: #4A2810;
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.5);
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+
+        .header-image {
+            width: 100%;
+            height: 150px;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 150"><rect fill="%238B4513" width="1000" height="150"/><text x="500" y="80" text-anchor="middle" fill="%23DAA520" font-size="40" font-family="Georgia">THE ONLINE TRAIL</text><text x="500" y="115" text-anchor="middle" fill="%23DEB887" font-size="18">2026 - The New Journey Begins</text></svg>') center/cover;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .status-bar {
+            background: linear-gradient(180deg, #5C4033 0%, #3D2817 100%);
+            border: 4px solid #DAA520;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .status-item {
+            text-align: center;
+            background: rgba(0,0,0,0.35);
+            padding: 12px 8px;
+            border-radius: 10px;
+            border: 1px solid rgba(218,165,32,0.2);
+            transition: all 0.3s;
+        }
+
+        .status-item:hover {
+            background: rgba(0,0,0,0.45);
+            border-color: rgba(218,165,32,0.4);
+            transform: translateY(-2px);
+        }
+
+        .status-icon { 
+            font-size: 2.2em; 
+            display: block; 
+            margin-bottom: 5px;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+        }
+        .status-label { 
+            color: #DEB887; 
+            font-size: 0.7em; 
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+        .status-value { 
+            color: #FFD700; 
+            font-size: 1.3em; 
+            font-weight: bold; 
+            transition: color 0.3s;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        }
+        .status-value.flash-green { color: #90EE90; text-shadow: 0 0 10px rgba(144,238,144,0.5); }
+        .status-value.flash-red { color: #FF6B6B; text-shadow: 0 0 10px rgba(255,107,107,0.5); }
+
+        .game-area {
+            background: linear-gradient(180deg, #FDF5E6 0%, #DEB887 100%);
+            border: 4px solid #5C4033;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 400px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .turn-indicator {
+            text-align: center;
+            padding: 12px 20px;
+            background: linear-gradient(180deg, #8B4513 0%, #5D3A1A 100%);
+            color: #FFD700;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            border: 2px solid #DAA520;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .turn-indicator .turn-info {
+            flex: 1;
+            text-align: center;
+            font-family: 'Georgia', serif;
+            letter-spacing: 1px;
+        }
+
+        .turn-indicator .turn-info span {
+            color: #FFEC8B;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .room-name-badge {
+            background: rgba(0,0,0,0.3);
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            color: #DEB887;
+            border: 1px solid rgba(218,165,32,0.5);
+        }
+
+        .turn-timer {
+            background: rgba(0,0,0,0.4);
+            color: #FFD700;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: bold;
+            min-width: 42px;
+            text-align: center;
+            border: 1px solid #DAA520;
+            transition: all 0.3s;
+        }
+        .turn-timer.urgent {
+            color: #FF4444;
+            border-color: #FF4444;
+            animation: timer-pulse 0.5s ease-in-out infinite;
+        }
+        @keyframes timer-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .turn-timer.hidden { display: none; }
+
+        .logout-btn {
+            background: rgba(0,0,0,0.3);
+            color: #DEB887;
+            border: 1px solid #DAA520;
+            padding: 6px 14px;
+            font-family: 'Georgia', serif;
+            font-size: 0.8em;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        .logout-btn:hover {
+            background: rgba(255,0,0,0.3);
+            color: #FF6B6B;
+            border-color: #FF6B6B;
+        }
+
+        .game-log {
+            background: #2b1810;
+            border: 3px solid #5C4033;
+            height: 350px;
+            overflow-y: auto;
+            padding: 16px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            line-height: 1.5;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            color: #DEB887;
+        }
+
+        .game-log::-webkit-scrollbar { width: 8px; }
+        .game-log::-webkit-scrollbar-track { background: #1a0f0a; border-radius: 4px; }
+        .game-log::-webkit-scrollbar-thumb { background: #8B4513; border-radius: 4px; }
+
+        /* Turn result card */
+        .turn-card {
+            margin: 12px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(218,165,32,0.3);
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+        .turn-card-header {
+            padding: 8px 14px;
+            font-weight: bold;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .turn-card-header .card-icon { font-size: 1.2em; }
+
+        .turn-card-body { padding: 0; }
+
+        .turn-card-line {
+            padding: 5px 14px;
+            font-size: 0.9em;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .turn-card-line:first-child { border-top: none; }
+        .turn-card-line .num { color: #DAA520; font-weight: bold; }
+
+        /* Card themes */
+        .turn-card.hunt    .turn-card-header { background: #2d4a1a; color: #90EE90; }
+        .turn-card.hunt    .turn-card-body   { background: #1a2e10; color: #b8d4a0; }
+        .turn-card.travel  .turn-card-header { background: #1a3a4a; color: #87CEEB; }
+        .turn-card.travel  .turn-card-body   { background: #0f2530; color: #a0c8d8; }
+        .turn-card.fort    .turn-card-header { background: #4a3a1a; color: #FFD700; }
+        .turn-card.fort    .turn-card-body   { background: #302510; color: #d4c090; }
+        .turn-card.danger  .turn-card-header { background: #4a1a1a; color: #FF6B6B; }
+        .turn-card.danger  .turn-card-body   { background: #301010; color: #d4a0a0; }
+        .turn-card.system  .turn-card-header { background: #2a2040; color: #B8A0D8; }
+        .turn-card.system  .turn-card-body   { background: #1a1530; color: #a098b8; }
+        .turn-card.player  .turn-card-header { background: #3a3020; color: #DEB887; }
+        .turn-card.player  .turn-card-body   { background: #252010; color: #c0a878; }
+        .turn-card.chat    .turn-card-header { background: #1a3a2a; color: #98D8B8; }
+        .turn-card.chat    .turn-card-body   { background: #102518; color: #a0c8b0; }
+
+        /* Danger lines within any card */
+        .turn-card-line.line-danger  { color: #FF6B6B; }
+        .turn-card-line.line-success { color: #90EE90; }
+        .turn-card-line.line-warning { color: #FFD700; }
+
+        /* Game layout: main + chat panel side by side */
+        .game-layout {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }
+        .game-main { flex: 1; min-width: 0; }
+
+        /* Chat panel */
+        .chat-panel {
+            width: 300px;
+            flex-shrink: 0;
+            background: linear-gradient(180deg, #2b1810 0%, #1a0f0a 100%);
+            border: 3px solid #5C4033;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            height: 480px;
+            transition: margin-right 0.3s, opacity 0.3s;
+        }
+        .chat-panel.collapsed {
+            display: none;
+        }
+        .chat-panel-header {
+            padding: 10px 14px;
+            background: linear-gradient(90deg, #1a3a2a, #0f2518);
+            border-bottom: 2px solid #2a5a3a;
+            border-radius: 7px 7px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-panel-title {
+            color: #98D8B8;
+            font-size: 0.85em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .chat-close-btn {
+            background: none;
+            border: 1px solid rgba(152,216,184,0.3);
+            color: #98D8B8;
+            cursor: pointer;
+            font-size: 1.1em;
+            line-height: 1;
+            padding: 2px 7px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .chat-close-btn:hover {
+            background: rgba(255,100,100,0.2);
+            color: #FF6B6B;
+            border-color: rgba(255,100,100,0.4);
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.82em;
+            line-height: 1.5;
+            color: #DEB887;
+        }
+        .chat-messages::-webkit-scrollbar { width: 6px; }
+        .chat-messages::-webkit-scrollbar-track { background: #1a0f0a; }
+        .chat-messages::-webkit-scrollbar-thumb { background: #5C4033; border-radius: 3px; }
+
+        .chat-msg {
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 6px;
+            border-left: 3px solid #2a5a3a;
+            animation: fadeIn 0.2s ease;
+        }
+        .chat-msg-name {
+            color: #98D8B8;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .chat-msg-text {
+            color: #c0b898;
+            margin-top: 2px;
+            word-wrap: break-word;
+        }
+        .chat-input-bar {
+            display: flex;
+            gap: 6px;
+            padding: 10px;
+            border-top: 2px solid #2a5a3a;
+            background: rgba(0,0,0,0.2);
+            border-radius: 0 0 7px 7px;
+        }
+        .chat-input-bar input {
+            flex: 1;
+            padding: 8px 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            border: 2px solid #3a2a1a;
+            border-radius: 6px;
+            background: #1a0f0a;
+            color: #DEB887;
+        }
+        .chat-input-bar input::placeholder { color: #5C4033; }
+        .chat-input-bar input:focus { outline: none; border-color: #2a5a3a; }
+        .chat-input-bar button {
+            background: linear-gradient(180deg, #1a3a2a 0%, #0f2518 100%);
+            color: #98D8B8;
+            border: 2px solid #2a5a3a;
+            padding: 8px 14px;
+            font-family: 'Georgia', serif;
+            font-size: 0.82em;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .chat-input-bar button:hover {
+            background: linear-gradient(180deg, #2a5a3a 0%, #1a3a2a 100%);
+        }
+        /* Chat toggle button in turn indicator */
+        .chat-toggle-btn {
+            background: linear-gradient(180deg, rgba(42,90,58,0.6) 0%, rgba(28,60,38,0.6) 100%);
+            color: #98D8B8;
+            border: 1px solid #3a7a4a;
+            padding: 6px 12px;
+            font-family: 'Georgia', serif;
+            font-size: 0.8em;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .chat-toggle-btn:hover {
+            background: linear-gradient(180deg, rgba(42,90,58,0.8) 0%, rgba(28,60,38,0.8) 100%);
+            border-color: #98D8B8;
+            transform: translateY(-1px);
+        }
+        .chat-toggle-btn.has-unread {
+            border-color: #98D8B8;
+            animation: chatPulse 2s ease-in-out infinite;
+        }
+        @keyframes chatPulse {
+            0%, 100% { box-shadow: 0 0 5px rgba(152,216,184,0.3); }
+            50% { box-shadow: 0 0 12px rgba(152,216,184,0.6); }
+        }
+        .chat-label {
+            font-weight: bold;
+        }
+        .chat-toggle-btn.has-unread {
+            border-color: #98D8B8;
+            animation: chatPulse 2s ease-in-out infinite;
+        }
+        @keyframes chatPulse {
+            0%, 100% { box-shadow: 0 0 5px rgba(152,216,184,0.3); }
+            50% { box-shadow: 0 0 12px rgba(152,216,184,0.6); }
+        }
+        .chat-label {
+            font-weight: bold;
+        }
+        .chat-badge {
+            display: none;
+            background: #FF6B6B;
+            color: #fff;
+            font-size: 0.7em;
+            font-weight: bold;
+            min-width: 16px;
+            height: 16px;
+            line-height: 16px;
+            text-align: center;
+            border-radius: 8px;
+            padding: 0 4px;
+        }
+        .chat-badge.visible { display: inline-block; }
+
+        @media (max-width: 800px) {
+            .game-layout { flex-direction: column; }
+            .chat-panel { width: 100%; height: 350px; }
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .action-btn {
+            background: linear-gradient(180deg, #9B5523 0%, #6B3A1A 100%);
+            color: #FFD700;
+            border: 3px solid #DAA520;
+            padding: 15px 30px;
+            font-family: 'Georgia', serif;
+            font-size: 1.1em;
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.3s;
+            min-width: 150px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .action-btn:hover:not(:disabled) {
+            background: linear-gradient(180deg, #B56533 0%, #8B4A2A 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4), 0 0 15px rgba(218,165,32,0.3);
+        }
+
+        .action-btn:active:not(:disabled) {
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .action-btn:disabled {
+            background: linear-gradient(180deg, #505050 0%, #303030 100%);
+            border-color: #606060;
+            color: #707070;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .action-btn .icon { font-size: 1.6em; display: block; margin-bottom: 5px; }
+
+        .your-turn-pulse {
+            animation: turnPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes turnPulse {
+            0%, 100% { box-shadow: 0 0 5px rgba(218,165,32,0.3), 0 4px 10px rgba(0,0,0,0.3); }
+            50% { box-shadow: 0 0 25px rgba(218,165,32,0.6), 0 4px 10px rgba(0,0,0,0.3); }
+        }
+
+        .scoreboard {
+            background: linear-gradient(180deg, #5C4033 0%, #3D2817 100%);
+            border: 3px solid #DAA520;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .scoreboard h3 { color: #FFD700; text-align: center; margin-bottom: 15px; font-style: italic; }
+        .scoreboard table { width: 100%; border-collapse: collapse; }
+        .scoreboard th { background: rgba(0,0,0,0.3); color: #DEB887; padding: 10px; text-align: left; }
+        .scoreboard td { background: rgba(0,0,0,0.2); color: #FFF; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .scoreboard tr.active { background: rgba(218, 165, 32, 0.3); }
+        .scoreboard .status-playing { color: #90EE90; }
+        .scoreboard .status-waiting { color: #FFD700; }
+        .scoreboard .status-dead { color: #FF6B6B; }
+
+        /* Kick button in scoreboard */
+        .kick-btn {
+            background: rgba(255,50,50,0.2);
+            color: #FF6B6B;
+            border: 1px solid #FF6B6B;
+            padding: 3px 10px;
+            font-family: 'Georgia', serif;
+            font-size: 0.75em;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .kick-btn:hover {
+            background: rgba(255,50,50,0.5);
+            color: #fff;
+        }
+
+        #login-screen {
+            text-align: center;
+            padding: 40px 35px;
+            background: linear-gradient(180deg, #FDF5E6 0%, #DEB887 100%);
+            border-radius: 15px;
+            border: 4px solid #8B4513;
+            max-width: 700px;
+            margin: 50px auto;
+            box-shadow: 0 8px 30px rgba(74,40,16,0.25);
+        }
+
+        #login-screen h2 { color: #4A2810; margin-bottom: 20px; }
+
+        #login-screen input[type="text"],
+        #login-screen input[type="password"],
+        #login-screen input[type="number"] {
+            padding: 10px 16px;
+            font-size: 1em;
+            border: 2px solid #8B4513;
+            border-radius: 8px;
+            width: 250px;
+            margin: 8px;
+            font-family: 'Georgia', serif;
+        }
+
+        /* Lobby browser */
+        .lobby-browser {
+            margin: 20px 0;
+            text-align: left;
+        }
+        .lobby-browser h3 {
+            color: #4A2810;
+            text-align: center;
+            margin-bottom: 12px;
+            font-style: italic;
+        }
+        .lobby-list {
+            max-height: 280px;
+            overflow-y: auto;
+            border: 2px solid #C4A472;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.3);
+        }
+        .lobby-list::-webkit-scrollbar { width: 6px; }
+        .lobby-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 10px; }
+        .lobby-list::-webkit-scrollbar-thumb { background: #8B4513; border-radius: 3px; }
+
+        .lobby-card {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(139,69,19,0.15);
+            cursor: pointer;
+            transition: all 0.2s;
+            gap: 12px;
+        }
+        .lobby-card:last-child { border-bottom: none; }
+        .lobby-card:hover {
+            background: rgba(139,69,19,0.1);
+        }
+        .lobby-card.selected {
+            background: linear-gradient(90deg, rgba(139,69,19,0.2), rgba(218,165,32,0.15));
+            border-left: 4px solid #DAA520;
+        }
+        .lobby-card-icon {
+            font-size: 1.8em;
+            flex-shrink: 0;
+            width: 40px;
+            text-align: center;
+        }
+        .lobby-card-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .lobby-card-name {
+            font-weight: bold;
+            color: #4A2810;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .lobby-card-name .lock-icon {
+            color: #B8860B;
+            font-size: 0.85em;
+        }
+        .lobby-card-meta {
+            color: #8B7355;
+            font-size: 0.8em;
+            margin-top: 2px;
+        }
+        .loot-badge {
+            display: inline-block;
+            background: #FFD700;
+            color: #4A2810;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            margin-left: 8px;
+            font-weight: bold;
+        }
+        .lobby-card-right {
+            flex-shrink: 0;
+            text-align: right;
+        }
+        .lobby-card-players {
+            color: #4A2810;
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+        .lobby-card-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+        .lobby-card-status.status-waiting {
+            background: rgba(34,139,34,0.15);
+            color: #228B22;
+        }
+        .lobby-card-status.status-playing {
+            background: rgba(218,165,32,0.15);
+            color: #B8860B;
+        }
+        .lobby-card-status.status-finished {
+            background: rgba(139,0,0,0.15);
+            color: #8B0000;
+        }
+
+        .lobby-empty {
+            text-align: center;
+            padding: 30px;
+            color: #8B7355;
+            font-style: italic;
+        }
+
+        /* Create game form */
+        .create-game-section {
+            margin-top: 15px;
+            text-align: center;
+        }
+        .create-toggle-btn {
+            background: linear-gradient(180deg, #A0522D 0%, #8B4513 100%);
+            color: #FFD700;
+            border: 2px solid #DAA520;
+            padding: 10px 24px;
+            font-family: 'Georgia', serif;
+            font-size: 0.95em;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .create-toggle-btn:hover {
+            background: linear-gradient(180deg, #B8602D 0%, #A0522D 100%);
+            transform: translateY(-1px);
+        }
+        .create-form {
+            display: none;
+            margin-top: 12px;
+            padding: 16px;
+            background: rgba(255,255,255,0.4);
+            border: 2px solid #C4A472;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .create-form.visible { display: block; }
+        .create-form label {
+            display: block;
+            color: #4A2810;
+            font-size: 0.85em;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+        .create-form input {
+            width: 220px;
+        }
+        .create-submit-btn {
+            background: linear-gradient(180deg, #228B22 0%, #006400 100%);
+            color: white;
+            border: 2px solid #90EE90;
+            padding: 10px 28px;
+            font-size: 1em;
+            font-family: 'Georgia', serif;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: all 0.3s;
+        }
+        .create-submit-btn:hover {
+            background: linear-gradient(180deg, #2E8B57 0%, #228B22 100%);
+            transform: translateY(-1px);
+        }
+
+        /* Password prompt inline */
+        .password-prompt {
+            display: none;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .password-prompt.visible { display: block; }
+        .password-prompt input {
+            width: 200px;
+        }
+
+        .join-btn {
+            background: linear-gradient(180deg, #228B22 0%, #006400 100%);
+            color: white; border: 3px solid #90EE90;
+            padding: 15px 40px; font-size: 1.3em; font-family: 'Georgia', serif;
+            border-radius: 10px; cursor: pointer; margin-top: 20px; transition: all 0.3s;
+        }
+        .join-btn:hover { background: linear-gradient(180deg, #2E8B57 0%, #228B22 100%); transform: translateY(-2px); }
+
+        .hidden { display: none !important; }
+
+        .game-over {
+            text-align: center; padding: 50px;
+            background: linear-gradient(180deg, #2C1810 0%, #1a0f0a 100%);
+            border: 4px solid #DAA520; border-radius: 15px;
+        }
+        .game-over h2 { color: #FFD700; font-size: 2.5em; margin-bottom: 20px; }
+        .game-over p { color: #DEB887; font-size: 1.1em; line-height: 1.8; }
+        .game-over.win h2 { color: #90EE90; }
+        .game-over.lose h2 { color: #FF6B6B; }
+        .game-over .btn-row { display: flex; gap: 15px; justify-content: center; margin-top: 20px; }
+
+        .progress-bar {
+            width: 100%; height: 28px; background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+            border-radius: 14px; margin: 15px 0; overflow: visible; border: 2px solid #DAA520;
+            position: relative;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .progress-fill {
+            height: 100%; 
+            background: linear-gradient(90deg, #1a5c1a 0%, #228B22 40%, #32CD32 100%);
+            border-radius: 12px; 
+            transition: width 0.5s;
+            box-shadow: inset 0 2px 0 rgba(255,255,255,0.2), 0 0 10px rgba(34,139,34,0.5);
+            position: relative;
+        }
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 10px;
+            right: 10px;
+            height: 6px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.3), transparent);
+            border-radius: 10px;
+        }
+
+        .loot-marker {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 10;
+        }
+        .loot-marker.available {
+            background: #FFD700;
+            border: 2px solid #FFA500;
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+            animation: pulse 2s infinite;
+        }
+        .loot-marker.looted {
+            background: #808080;
+            border: 2px solid #505050;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        .game-status { text-align: center; margin-bottom: 15px; font-style: italic; color: #4A2810; }
+
+        /* Leaderboard */
+        .leaderboard {
+            margin-top: 25px;
+            text-align: left;
+        }
+        .leaderboard h3 {
+            color: #4A2810;
+            text-align: center;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+        .leaderboard-columns {
+            display: flex;
+            gap: 15px;
+        }
+        .leaderboard-col {
+            flex: 1;
+            min-width: 0;
+        }
+        .leaderboard-col h4 {
+            text-align: center;
+            margin-bottom: 8px;
+            font-style: italic;
+            color: #4A2810;
+            font-size: 0.95em;
+        }
+        @media (max-width: 700px) {
+            .leaderboard-columns { flex-direction: column; }
+        }
+        .leaderboard table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+        }
+        .leaderboard th {
+            background: #8B4513;
+            color: #FFD700;
+            padding: 6px 8px;
+            text-align: left;
+        }
+        .leaderboard td {
+            background: rgba(139,69,19,0.1);
+            color: #4A2810;
+            padding: 6px 8px;
+            border-bottom: 1px solid rgba(139,69,19,0.2);
+        }
+        .leaderboard .won { color: #228B22; font-weight: bold; }
+        .leaderboard .lost { color: #8B0000; }
+        .leaderboard-empty {
+            text-align: center;
+            padding: 15px;
+            color: #8B7355;
+            font-style: italic;
+            font-size: 0.85em;
+        }
+
+        /* Game-over leaderboard uses dark theme */
+        .game-over .leaderboard h3 { color: #FFD700; }
+        .game-over .leaderboard-col h4 { color: #DEB887; }
+        .game-over .leaderboard th { background: rgba(0,0,0,0.4); }
+        .game-over .leaderboard td { background: rgba(0,0,0,0.2); color: #DEB887; }
+        .game-over .leaderboard .won { color: #90EE90; }
+        .game-over .leaderboard .lost { color: #FF6B6B; }
+        .game-over .leaderboard-empty { color: #a09070; }
+
+        /* Resuming overlay */
+        .resuming-notice {
+            text-align: center;
+            padding: 30px;
+            color: #4A2810;
+            font-size: 1.2em;
+            font-style: italic;
+        }
+
+        /* Fort shop overlay */
+        .fort-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            animation: fadeIn 0.3s ease;
+        }
+        .fort-shop {
+            background: linear-gradient(180deg, #3D2817 0%, #2C1810 100%);
+            border: 4px solid #DAA520;
+            border-radius: 15px;
+            padding: 0;
+            width: 70%;
+            max-width: 500px;
+            max-height: 70vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .fort-shop-header {
+            padding: 18px 24px;
+            background: linear-gradient(90deg, #4a3a1a, #3a2a10);
+            border-bottom: 3px solid #DAA520;
+            border-radius: 11px 11px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .fort-shop-title {
+            color: #FFD700;
+            font-size: 1.3em;
+            font-weight: bold;
+            font-style: italic;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .fort-cash {
+            color: #90EE90;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        .fort-shop-body {
+            padding: 20px 24px;
+        }
+        .fort-items {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        @media (max-width: 500px) {
+            .fort-items { grid-template-columns: 1fr; }
+        }
+        .fort-item-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+            border: 2px solid rgba(218,165,32,0.3);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            transition: border-color 0.2s;
+        }
+        .fort-item-card:hover {
+            border-color: #DAA520;
+        }
+        .fort-item-icon {
+            font-size: 2.5em;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .fort-item-name {
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 1em;
+            margin-bottom: 4px;
+        }
+        .fort-item-stock {
+            color: #DEB887;
+            font-size: 0.8em;
+            margin-bottom: 4px;
+        }
+        .fort-item-bundle {
+            color: #a09070;
+            font-size: 0.75em;
+            margin-bottom: 10px;
+        }
+        .fort-item-price {
+            color: #90EE90;
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .fort-qty-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .fort-qty-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid #DAA520;
+            background: rgba(0,0,0,0.3);
+            color: #FFD700;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            line-height: 1;
+        }
+        .fort-qty-btn:hover:not(:disabled) {
+            background: rgba(218,165,32,0.3);
+        }
+        .fort-qty-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .fort-qty-val {
+            color: #FFD700;
+            font-size: 1.2em;
+            font-weight: bold;
+            min-width: 30px;
+            text-align: center;
+        }
+        .fort-item-total {
+            color: #DEB887;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+        }
+        .fort-buy-btn {
+            background: linear-gradient(180deg, #228B22 0%, #006400 100%);
+            color: white;
+            border: 2px solid #90EE90;
+            padding: 8px 20px;
+            font-family: 'Georgia', serif;
+            font-size: 0.9em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        .fort-buy-btn:hover:not(:disabled) {
+            background: linear-gradient(180deg, #2E8B57 0%, #228B22 100%);
+            transform: translateY(-1px);
+        }
+        .fort-buy-btn:disabled {
+            background: #404040;
+            border-color: #666;
+            color: #999;
+            cursor: not-allowed;
+        }
+        .fort-receipt {
+            text-align: center;
+            padding: 10px;
+            margin-top: 14px;
+            color: #90EE90;
+            font-style: italic;
+            font-size: 0.9em;
+            min-height: 20px;
+        }
+        .fort-leave-row {
+            text-align: center;
+            padding: 16px 24px 20px;
+        }
+        .fort-leave-btn {
+            background: linear-gradient(180deg, #8B4513 0%, #5C3317 100%);
+            color: #FFD700;
+            border: 3px solid #DAA520;
+            padding: 12px 36px;
+            font-family: 'Georgia', serif;
+            font-size: 1.1em;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .fort-leave-btn:hover {
+            background: linear-gradient(180deg, #A0522D 0%, #8B4513 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        /* Room name badge in turn indicator */
+        .room-name-badge {
+            background: rgba(0,0,0,0.3);
+            color: #DEB887;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 0.75em;
+            white-space: nowrap;
+        }
+
+        /* ======== HUNTING OVERLAY ======== */
+        .hunt-overlay {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(180deg, #0a1628 0%, #1a2a1a 50%, #0d1a0d 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            cursor: none;
+            animation: fadeIn 0.3s ease;
+            overflow: hidden;
+        }
+        .hunt-scene {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+        }
+        /* Moon and stars */
+        .hunt-sky {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at top, #1a2a3a 0%, #0a1520 60%, #0a1a0a 100%);
+        }
+        .hunt-moon {
+            position: absolute;
+            top: 8%;
+            right: 15%;
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, #fffde7 0%, #ffecb3 50%, transparent 70%);
+            border-radius: 50%;
+            box-shadow: 0 0 40px rgba(255,236,179,0.6), 0 0 80px rgba(255,236,179,0.3);
+        }
+        .hunt-stars {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, #fff, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(1px 1px at 90px 40px, #fff, transparent),
+                radial-gradient(2px 2px at 130px 80px, rgba(255,255,255,0.6), transparent),
+                radial-gradient(1px 1px at 160px 20px, #fff, transparent);
+            animation: twinkle 3s ease-in-out infinite;
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        /* Trees */
+        .hunt-tree {
+            position: absolute;
+            bottom: 15%;
+            width: 0; height: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            border-bottom: 70px solid #0f2f0f;
+        }
+        .hunt-tree::after {
+            content: '';
+            position: absolute;
+            top: 40px;
+            left: -6px;
+            width: 12px;
+            height: 35px;
+            background: #3a2a1a;
+        }
+        .hunt-tree:nth-child(1) { left: 3%; border-bottom-color: #0a2a0a; transform: scale(0.8); }
+        .hunt-tree:nth-child(2) { left: 12%; bottom: 18%; border-bottom-width: 90px; border-left-width: 35px; border-right-width: 35px; border-bottom-color: #082008; }
+        .hunt-tree:nth-child(3) { right: 8%; border-bottom-color: #0a2a0a; transform: scale(0.9); }
+        .hunt-tree:nth-child(4) { right: 18%; bottom: 20%; border-bottom-width: 80px; border-bottom-color: #0f2f0f; }
+        .hunt-tree:nth-child(5) { left: 35%; bottom: 12%; border-bottom-width: 50px; border-bottom-color: #1a3a1a; }
+
+        /* Ground with grass */
+        .hunt-ground {
+            position: absolute;
+            bottom: 0;
+            left: 0; right: 0;
+            height: 15%;
+            background: linear-gradient(180deg, #1a2a0a, #0a1505);
+            border-top: 3px solid #2a4a1a;
+        }
+        .hunt-grass {
+            position: absolute;
+            bottom: 15%;
+            left: 0; right: 0;
+            height: 8%;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent 0px,
+                transparent 10px,
+                #1a3a0a 10px,
+                #1a3a0a 12px
+            );
+            animation: grassWave 2s ease-in-out infinite;
+        }
+        @keyframes grassWave {
+            0%, 100% { transform: skewX(0deg); }
+            50% { transform: skewX(2deg); }
+        }
+
+        /* Wildlife */
+        .hunt-wildlife {
+            position: absolute;
+            bottom: 16%;
+            font-size: 3em;
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));
+            transition: all 0.3s ease;
+            cursor: none;
+        }
+        .hunt-wildlife.deer {
+            font-size: 4em;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .hunt-wildlife.rabbit {
+            font-size: 2em;
+            left: 20%;
+            animation: rabbitHop 2s ease-in-out infinite;
+        }
+        .hunt-wildlife.bird {
+            font-size: 1.5em;
+            top: 20%;
+            left: 30%;
+            animation: birdFly 4s ease-in-out infinite;
+        }
+        .hunt-wildlife.buffalo {
+            font-size: 5em;
+            right: 15%;
+        }
+        @keyframes rabbitHop {
+            0%, 100% { transform: translateY(0) translateX(-50%); }
+            50% { transform: translateY(-15px) translateX(-50%); }
+        }
+        @keyframes birdFly {
+            0%, 100% { transform: translateX(0) translateY(0); }
+            25% { transform: translateX(30px) translateY(-10px); }
+            50% { transform: translateX(60px) translateY(0); }
+            75% { transform: translateX(30px) translateY(10px); }
+        }
+        .hunt-wildlife.hit {
+            animation: animalHit 0.5s ease-out forwards;
+        }
+        @keyframes animalHit {
+            0% { transform: translateX(-50%) rotate(0deg); opacity: 1; }
+            100% { transform: translateX(-50%) rotate(90deg) translateY(30px); opacity: 0.5; }
+        }
+        .hunt-wildlife.miss {
+            animation: animalRun 0.8s ease-out forwards;
+        }
+        @keyframes animalRun {
+            0% { transform: translateX(-50%); opacity: 1; }
+            100% { transform: translateX(-150%); opacity: 0; }
+        }
+
+        /* Crosshair */
+        .hunt-crosshair {
+            position: fixed;
+            width: 60px;
+            height: 60px;
+            pointer-events: none;
+            z-index: 999;
+            transform: translate(-50%, -50%);
+        }
+        .hunt-crosshair::before,
+        .hunt-crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+        .hunt-crosshair::before {
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            transform: translateY(-50%);
+        }
+        .hunt-crosshair::after {
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            transform: translateX(-50%);
+        }
+        .hunt-crosshair .crosshair-circle {
+            position: absolute;
+            inset: 0;
+            border: 2px solid rgba(255,255,255,0.7);
+            border-radius: 50%;
+        }
+        .hunt-crosshair .crosshair-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 4px;
+            background: #ff0000;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .hunt-crosshair.firing {
+            animation: crosshairRecoil 0.15s ease-out;
+        }
+        @keyframes crosshairRecoil {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.3); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* Muzzle flash */
+        .hunt-muzzle-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(255,200,0,0.4) 0%, transparent 30%);
+            pointer-events: none;
+            opacity: 0;
+            z-index: 998;
+            animation: muzzleFlash 0.1s ease-out;
+        }
+        @keyframes muzzleFlash {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        .hunt-text {
+            position: relative;
+            z-index: 10;
+            color: #FFD700;
+            font-size: 2em;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(255,215,0,0.5), 2px 2px 4px rgba(0,0,0,0.8);
+            margin-bottom: 20px;
+            min-height: 60px;
+            text-align: center;
+            background: rgba(0,0,0,0.5);
+            padding: 10px 30px;
+            border-radius: 10px;
+            border: 2px solid rgba(255,215,0,0.3);
+        }
+
+        .hunt-word {
+            font-size: 3.5em;
+            color: #FF4444;
+            text-shadow: 0 0 30px rgba(255,68,68,0.8), 0 0 60px rgba(255,68,68,0.4), 2px 2px 4px rgba(0,0,0,0.8);
+            animation: wordFlash 0.15s ease-out;
+            position: relative;
+            z-index: 10;
+            letter-spacing: 5px;
+        }
+        @keyframes wordFlash {
+            0% { transform: scale(3); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        .hunt-instructions {
+            position: absolute;
+            bottom: 8%;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.6);
+            font-size: 0.9em;
+            text-align: center;
+            z-index: 10;
+        }
+        .hunt-instructions kbd {
+            background: rgba(255,255,255,0.2);
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .hunt-fire-btn {
+            position: relative;
+            z-index: 10;
+            background: linear-gradient(180deg, #CC0000 0%, #880000 100%);
+            color: white;
+            border: 4px solid #FF4444;
+            padding: 20px 60px;
+            font-family: 'Georgia', serif;
+            font-size: 1.8em;
+            font-weight: bold;
+            cursor: crosshair;
+            border-radius: 15px;
+            transition: all 0.1s;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            box-shadow: 0 0 30px rgba(255,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.2);
+            margin-top: 20px;
+        }
+        .hunt-fire-btn:hover {
+            background: linear-gradient(180deg, #EE0000 0%, #AA0000 100%);
+            box-shadow: 0 0 40px rgba(255,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.2);
+            transform: scale(1.05);
+        }
+        .hunt-fire-btn:disabled {
+            background: #333;
+            border-color: #555;
+            color: #666;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .hunt-fire-btn.ready {
+            animation: fireBtnPulse 0.5s ease-in-out infinite;
+        }
+        @keyframes fireBtnPulse {
+            0%, 100% { box-shadow: 0 0 30px rgba(255,0,0,0.3); }
+            50% { box-shadow: 0 0 50px rgba(255,0,0,0.7); }
+        }
+
+        .hunt-result {
+            position: relative;
+            z-index: 10;
+            font-size: 2em;
+            font-weight: bold;
+            margin-top: 20px;
+            padding: 20px 40px;
+            border-radius: 15px;
+            animation: fadeIn 0.3s ease, resultSlide 0.3s ease-out;
+            background: rgba(0,0,0,0.7);
+            border: 3px solid;
+        }
+        @keyframes resultSlide {
+            0% { transform: translateY(20px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        .hunt-result.perfect { 
+            color: #00FF00; 
+            border-color: #00FF00;
+            text-shadow: 0 0 20px rgba(0,255,0,0.5); 
+        }
+        .hunt-result.good { 
+            color: #90EE90; 
+            border-color: #90EE90;
+        }
+        .hunt-result.miss { 
+            color: #FF4444; 
+            border-color: #FF4444;
+            text-shadow: 0 0 20px rgba(255,0,0,0.5); 
+        }
+        .hunt-result .food-gained {
+            display: block;
+            font-size: 0.7em;
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+
+        /* ======== LOOT SITE OVERLAY ======== */
+        .loot-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 210;
+            animation: fadeIn 0.3s ease;
+        }
+        .loot-panel {
+            background: linear-gradient(180deg, #3D2817 0%, #2C1810 100%);
+            border: 4px solid #DAA520;
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .loot-header {
+            font-size: 1.6em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #FFD700;
+        }
+        .loot-info {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: left;
+        }
+        .loot-info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .loot-info-row:last-child {
+            border-bottom: none;
+        }
+        .loot-btn-row {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .loot-btn {
+            flex: 1;
+            padding: 15px 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .loot-btn:hover {
+            transform: translateY(-2px);
+        }
+        .loot-btn-claim {
+            background: linear-gradient(180deg, #FFD700 0%, #DAA520 100%);
+            color: #2C1810;
+        }
+        .loot-btn-pass {
+            background: linear-gradient(180deg, #8B7355 0%, #5D4E37 100%);
+            color: #DEB887;
+        }
+
+        /* ======== RIDER OVERLAY ======== */
+        .rider-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            animation: fadeIn 0.3s ease;
+        }
+        .rider-panel {
+            background: linear-gradient(180deg, #3D2817 0%, #2C1810 100%);
+            border: 4px solid #DAA520;
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 550px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .rider-header {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .rider-header.hostile { color: #FF4444; }
+        .rider-header.friendly { color: #FFD700; }
+        .rider-count {
+            color: #DEB887;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+        .rider-waiting {
+            color: #DEB887;
+            font-size: 1.1em;
+            font-style: italic;
+            padding: 30px 0;
+        }
+        .tactic-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .tactic-btn {
+            background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+            border: 2px solid rgba(218,165,32,0.4);
+            border-radius: 12px;
+            padding: 16px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .tactic-btn:hover:not(:disabled) {
+            border-color: #DAA520;
+            background: rgba(218,165,32,0.15);
+            transform: translateY(-2px);
+        }
+        .tactic-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .tactic-icon {
+            font-size: 2em;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .tactic-name {
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 1em;
+            margin-bottom: 4px;
+        }
+        .tactic-desc {
+            color: #a09070;
+            font-size: 0.78em;
+            line-height: 1.3;
+        }
+        .rider-result {
+            color: #DEB887;
+            font-size: 1.2em;
+            padding: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* ======== PARTY HEALTH DISPLAY ======== */
+        .party-health {
+            background: linear-gradient(180deg, #5C4033 0%, #3D2817 100%);
+            border: 3px solid #DAA520;
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .party-member {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            min-width: 90px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        .party-member.dead {
+            opacity: 0.4;
+            filter: grayscale(1);
+        }
+        .party-member.damaged {
+            animation: healthPulse 0.6s ease;
+        }
+        @keyframes healthPulse {
+            0%, 100% { background: rgba(0,0,0,0.3); }
+            50% { background: rgba(255,0,0,0.3); }
+        }
+        .member-name {
+            color: #DEB887;
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .member-dead-name {
+            color: #888;
+            text-decoration: line-through;
+        }
+        .health-bar {
+            width: 100%;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 2px;
+        }
+        .health-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s, background 0.5s;
+        }
+        .member-hp {
+            color: #a09070;
+            font-size: 0.7em;
+        }
+        .member-skull {
+            font-size: 1.2em;
+            margin-bottom: 2px;
+        }
+
+        /* Health bar color based on percentage */
+        .health-green { background: linear-gradient(90deg, #228B22, #32CD32); }
+        .health-yellow { background: linear-gradient(90deg, #DAA520, #FFD700); }
+        .health-red { background: linear-gradient(90deg, #8B0000, #FF4444); }
+
+        /* Death notification in game log */
+        .turn-card.death .turn-card-header { background: #4a0a0a; color: #FF4444; }
+        .turn-card.death .turn-card-body { background: #2a0505; color: #d4a0a0; }
+
+        /* Spectator banner */
+        .spectator-banner {
+            text-align: center;
+            padding: 15px 20px;
+            background: linear-gradient(90deg, #4a0a0a, #6a1a1a, #4a0a0a);
+            color: #FF6B6B;
+            border: 2px solid #FF4444;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            font-weight: bold;
+            animation: spectatorPulse 3s ease-in-out infinite;
+        }
+        .spectator-banner .spectator-subtitle {
+            font-size: 0.8em;
+            font-weight: normal;
+            color: #DEB887;
+            margin-top: 4px;
+        }
+        @keyframes spectatorPulse {
+            0%, 100% { box-shadow: 0 0 5px rgba(255,68,68,0.2); }
+            50% { box-shadow: 0 0 15px rgba(255,68,68,0.4); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>The Online Trail</h1>
+        <div class="header-image"></div>
+
+        <div id="resuming-screen" class="hidden">
+            <div class="resuming-notice">
+                Reconnecting to your wagon train...
+            </div>
+        </div>
+
+        <div id="login-screen">
+            <h2>Join the Trail</h2>
+            <input type="text" id="player-name" placeholder="Enter your name" maxlength="20">
+
+            <button class="join-btn" onclick="joinGame()">Start Journey</button>
+            <p style="margin-top: 8px; color: #8B7355; font-size: 0.85em; font-style: italic;">
+                Join the public open trail &mdash; session saved automatically
+            </p>
+
+            <div class="lobby-browser">
+                <h3>Available Games</h3>
+                <div class="lobby-list" id="lobby-list">
+                    <div class="lobby-empty">Loading lobbies...</div>
+                </div>
+            </div>
+
+            <div class="password-prompt" id="password-prompt">
+                <input type="password" id="lobby-password" placeholder="Enter room password">
+            </div>
+
+            <div class="create-game-section">
+                <button class="create-toggle-btn" onclick="toggleCreateForm()">+ Create Private Game</button>
+                <p style="margin-top: 6px; color: #8B7355; font-size: 0.8em; font-style: italic;">
+                    Start your own private party game with friends
+                </p>
+                <div class="create-form" id="create-form">
+                    <label>Room Name</label>
+                    <input type="text" id="create-name" placeholder="Pioneer Party" maxlength="30">
+                    <label>Password (optional)</label>
+                    <input type="password" id="create-password" placeholder="Leave blank for open">
+                    <label>Max Players (optional)</label>
+                    <input type="number" id="create-max-players" placeholder="Unlimited" min="2" max="20">
+                    <br>
+                    <button class="create-submit-btn" onclick="createGame()">Create &amp; Join</button>
+                </div>
+            </div>
+
+            <div id="login-leaderboard" class="leaderboard hidden"></div>
+        </div>
+
+        <div id="game-screen" class="hidden">
+            <div class="turn-indicator" id="turn-indicator">
+                <span class="room-name-badge" id="room-name-badge"></span>
+                <div class="turn-info">
+                    Week <span id="turn-number">0</span> | Mile <span id="mileage">0</span> of 4500
+                </div>
+                <span class="turn-timer hidden" id="turn-timer">20s</span>
+                <button class="chat-toggle-btn" onclick="toggleChat()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    <span class="chat-label">Chat</span>
+                    <span class="chat-badge" id="chat-badge"></span>
+                </button>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+
+            <div class="progress-bar" id="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                <div id="loot-markers-container"></div>
+            </div>
+
+            <div class="spectator-banner hidden" id="spectator-banner">
+                YOUR PARTY HAS PERISHED - You are now spectating
+                <div class="spectator-subtitle" id="spectator-subtitle"></div>
+            </div>
+
+            <div class="game-status" id="game-status">
+                Waiting for game to start...
+            </div>
+
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-icon">&#x1F356;</span>
+                    <div class="status-label">Food</div>
+                    <div class="status-value" id="food">100</div>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon">&#x1F4A5;</span>
+                    <div class="status-label">Bullets</div>
+                    <div class="status-value" id="bullets">50</div>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon">&#x1F455;</span>
+                    <div class="status-label">Clothing</div>
+                    <div class="status-value" id="clothing">20</div>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon">&#x1F48A;</span>
+                    <div class="status-label">Supplies</div>
+                    <div class="status-value" id="misc">10</div>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon">&#x1F4B0;</span>
+                    <div class="status-label">Cash</div>
+                    <div class="status-value" id="cash">$700</div>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon">&#x1F402;</span>
+                    <div class="status-label">Oxen</div>
+                    <div class="status-value" id="oxen">$220</div>
+                </div>
+            </div>
+
+            <!-- Party Health Display -->
+            <div class="party-health" id="party-health"></div>
+
+            <div class="game-layout">
+                <div class="game-main">
+                    <div class="game-area">
+                        <div class="game-log" id="game-log"></div>
+
+                        <div class="actions">
+                            <button class="action-btn" onclick="takeAction('hunt')" id="btn-hunt" disabled>
+                                <span class="icon">&#x1F3F9;</span>
+                                Hunt
+                            </button>
+                            <button class="action-btn" onclick="takeAction('continue')" id="btn-continue" disabled>
+                                <span class="icon">&#x1F40E;</span>
+                                Continue
+                            </button>
+                            <button class="action-btn hidden" onclick="enterFort()" id="btn-fort" disabled>
+                                <span class="icon">&#x1F3D8;</span>
+                                Enter Fort
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-panel collapsed" id="chat-panel">
+                    <div class="chat-panel-header">
+                        <div class="chat-panel-title">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                            Pioneer Chat
+                        </div>
+                        <button class="chat-close-btn" onclick="toggleChat()">&times;</button>
+                    </div>
+                    <div class="chat-messages" id="chat-messages"></div>
+                    <div class="chat-input-bar">
+                        <input type="text" id="chat-input" placeholder="Say something..." maxlength="200">
+                        <button onclick="sendChat()">Send</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fort Shop Overlay -->
+            <div id="fort-overlay" class="fort-overlay hidden">
+                <div class="fort-shop">
+                    <div class="fort-shop-header">
+                        <div class="fort-shop-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                            Fort Trading Post
+                        </div>
+                        <div class="fort-cash" id="fort-cash">$0</div>
+                    </div>
+                    <div class="fort-shop-body">
+                        <div class="fort-items" id="fort-items"></div>
+                        <div class="fort-receipt" id="fort-receipt"></div>
+                    </div>
+                    <div class="fort-leave-row">
+                        <button class="fort-leave-btn" onclick="fortLeave()">Leave Fort &amp; Continue</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hunting Overlay -->
+            <div id="hunt-overlay" class="hunt-overlay hidden">
+                <div class="hunt-scene">
+                    <div class="hunt-sky"></div>
+                    <div class="hunt-stars"></div>
+                    <div class="hunt-moon"></div>
+                    <div class="hunt-tree"></div>
+                    <div class="hunt-tree"></div>
+                    <div class="hunt-tree"></div>
+                    <div class="hunt-tree"></div>
+                    <div class="hunt-tree"></div>
+                    <div class="hunt-grass"></div>
+                    <div class="hunt-ground"></div>
+                    <div class="hunt-wildlife deer" id="hunt-deer">🦌</div>
+                    <div class="hunt-wildlife rabbit" id="hunt-rabbit" style="display:none">🐰</div>
+                    <div class="hunt-wildlife bird" id="hunt-bird" style="display:none">🦅</div>
+                    <div class="hunt-wildlife buffalo" id="hunt-buffalo" style="display:none">🦬</div>
+                </div>
+                <div class="hunt-text" id="hunt-text">Get ready...</div>
+                <div id="hunt-word-display"></div>
+                <button class="hunt-fire-btn" id="hunt-fire-btn" disabled onclick="huntFire()">FIRE!</button>
+                <div id="hunt-result"></div>
+                <div class="hunt-instructions">Press <kbd>FIRE!</kbd> or <kbd>SPACE</kbd> when the word appears - no aiming needed!</div>
+                <div class="hunt-crosshair" id="hunt-crosshair">
+                    <div class="crosshair-circle"></div>
+                    <div class="crosshair-dot"></div>
+                </div>
+                <div class="hunt-muzzle-flash" id="hunt-muzzle-flash"></div>
+            </div>
+
+            <!-- Rider Combat Overlay -->
+            <div id="rider-overlay" class="rider-overlay hidden">
+                <div class="rider-panel">
+                    <div class="rider-header" id="rider-header">RIDERS AHEAD!</div>
+                    <div class="rider-count" id="rider-count"></div>
+                    <div id="rider-body">
+                        <div class="tactic-grid" id="tactic-grid">
+                            <div class="tactic-btn" onclick="riderTactic(1)">
+                                <span class="tactic-icon">&#x1F462;</span>
+                                <div class="tactic-name">Run</div>
+                                <div class="tactic-desc">Flee and lose supplies</div>
+                            </div>
+                            <div class="tactic-btn" onclick="riderTactic(2)">
+                                <span class="tactic-icon">&#x2694;&#xFE0F;</span>
+                                <div class="tactic-name">Attack</div>
+                                <div class="tactic-desc">Fight back with your guns</div>
+                            </div>
+                            <div class="tactic-btn" onclick="riderTactic(3)">
+                                <span class="tactic-icon">&#x1F6B6;</span>
+                                <div class="tactic-name">Continue</div>
+                                <div class="tactic-desc">Keep going, hope for the best</div>
+                            </div>
+                            <div class="tactic-btn" onclick="riderTactic(4)">
+                                <span class="tactic-icon">&#x1F6E1;&#xFE0F;</span>
+                                <div class="tactic-name">Circle Wagons</div>
+                                <div class="tactic-desc">Defensive position</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loot Site Overlay -->
+            <div id="loot-overlay" class="loot-overlay hidden">
+                <div class="loot-panel">
+                    <div class="loot-header">&#x1F3CA; Abandoned Wagon Found!</div>
+                    <div id="loot-info" class="loot-info"></div>
+                    <div class="loot-btn-row">
+                        <button class="loot-btn loot-btn-pass" onclick="hideLootOverlay()">Pass</button>
+                        <button class="loot-btn loot-btn-claim" id="loot-claim-btn" onclick="claimLoot()">Loot Wagon</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="scoreboard">
+                <h3>Party Members</h3>
+                <table>
+                    <thead>
+                        <tr><th>Name</th><th>Status</th><th>Miles</th><th></th></tr>
+                    </thead>
+                    <tbody id="player-list"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="game-over" class="hidden game-over">
+            <h2 id="game-over-title">GAME OVER</h2>
+            <p id="game-over-message"></p>
+            <div class="btn-row">
+                <button class="join-btn" onclick="resetGame()">New Journey</button>
+                <button class="join-btn" onclick="logout()" style="background: linear-gradient(180deg, #8B4513 0%, #5C3317 100%); border-color: #DAA520;">Logout</button>
+            </div>
+            <div id="gameover-leaderboard" class="leaderboard hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let playerName = '';
+        let clientId = '';
+        let isMyTurn = false;
+        let currentRoomID = '';
+        let currentOwnerID = '';
+        let selectedLobbyID = 'continuous';
+        let prevState = {};
+        let gameIsOver = false;
+        let chatOpen = false;
+        let chatUnread = 0;
+        let fortQty = {};
+        let fortSellQty = {};
+        let fortPrices = null;
+        let lobbyPollTimer = null;
+        let myPlayerDead = false;
+        let turnDeadline = 0;
+        let turnTimerInterval = null;
+
+        /* -- Session resume on page load -- */
+        (function checkSession() {
+            fetch('/api/session', { credentials: 'same-origin' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.valid && data.name && data.room_id) {
+                        document.getElementById('login-screen').classList.add('hidden');
+                        document.getElementById('resuming-screen').classList.remove('hidden');
+                        playerName = data.name;
+                        currentRoomID = data.room_id;
+                        connectWs(playerName, currentRoomID, '');
+                    } else {
+                        startLobbyPolling();
+                        loadLeaderboard('login-leaderboard');
+                    }
+                })
+                .catch(function() {
+                    startLobbyPolling();
+                    loadLeaderboard('login-leaderboard');
+                });
+        })();
+
+        /* -- Lobby browser -- */
+        function startLobbyPolling() {
+            fetchLobbies();
+            lobbyPollTimer = setInterval(fetchLobbies, 3000);
+        }
+
+        function stopLobbyPolling() {
+            if (lobbyPollTimer) {
+                clearInterval(lobbyPollTimer);
+                lobbyPollTimer = null;
+            }
+        }
+
+        function fetchLobbies() {
+            fetch('/api/lobbies')
+                .then(function(r) { return r.json(); })
+                .then(function(lobbies) {
+                    renderLobbies(lobbies);
+                })
+                .catch(function() {});
+        }
+
+        function renderLobbies(lobbies) {
+            var container = document.getElementById('lobby-list');
+            if (!lobbies || lobbies.length === 0) {
+                container.innerHTML = '<div class="lobby-empty">No games available. Create one!</div>';
+                return;
+            }
+
+            // Sort: continuous first, then by player count descending
+            lobbies.sort(function(a, b) {
+                if (a.id === 'continuous') return -1;
+                if (b.id === 'continuous') return 1;
+                return b.player_count - a.player_count;
+            });
+
+            var html = '';
+            lobbies.forEach(function(lobby) {
+                var icon = lobby.room_type === 'continuous' ? '&#x1F40E;' : '&#x1F3D5;&#xFE0F;';
+                var selectedClass = selectedLobbyID === lobby.id ? ' selected' : '';
+                var lockHtml = lobby.has_password ? ' <span class="lock-icon">&#x1F512;</span>' : '';
+                var playersText = lobby.max_players > 0
+                    ? lobby.player_count + '/' + lobby.max_players
+                    : lobby.player_count + ' players';
+                var statusClass = 'status-' + lobby.status;
+                var statusText = lobby.status === 'waiting' ? 'Waiting'
+                    : lobby.status === 'playing' ? 'In Progress'
+                    : 'Finished';
+                var typeLabel = lobby.room_type === 'continuous' ? '24/7 Open' : 'Party Game';
+                var lootHtml = '';
+                if (lobby.loot_site_count > 0) {
+                    lootHtml = '<span class="loot-badge" title="Abandoned wagons to loot!">' + lobby.loot_site_count + ' wagon(s) lootable</span>';
+                }
+
+                html += '<div class="lobby-card' + selectedClass + '" onclick="selectLobby(\'' + lobby.id + '\', ' + lobby.has_password + ')">'
+                    + '<div class="lobby-card-icon">' + icon + '</div>'
+                    + '<div class="lobby-card-info">'
+                    + '<div class="lobby-card-name">' + escapeHtml(lobby.name) + lockHtml + '</div>'
+                    + '<div class="lobby-card-meta">' + typeLabel + lootHtml + '</div>'
+                    + '</div>'
+                    + '<div class="lobby-card-right">'
+                    + '<div class="lobby-card-players">' + playersText + '</div>'
+                    + '<div class="lobby-card-status ' + statusClass + '">' + statusText + '</div>'
+                    + '</div>'
+                    + '</div>';
+            });
+            container.innerHTML = html;
+        }
+
+        function selectLobby(id, hasPassword) {
+            selectedLobbyID = id;
+            // Highlight selected
+            document.querySelectorAll('.lobby-card').forEach(function(c) {
+                c.classList.remove('selected');
+            });
+            // Find the clicked card and highlight it
+            var cards = document.querySelectorAll('.lobby-card');
+            cards.forEach(function(c) {
+                if (c.getAttribute('onclick').indexOf("'" + id + "'") !== -1) {
+                    c.classList.add('selected');
+                }
+            });
+            // Show/hide password prompt
+            var prompt = document.getElementById('password-prompt');
+            if (hasPassword) {
+                prompt.classList.add('visible');
+                document.getElementById('lobby-password').focus();
+            } else {
+                prompt.classList.remove('visible');
+                document.getElementById('lobby-password').value = '';
+            }
+        }
+
+        /* -- Create game -- */
+        function toggleCreateForm() {
+            var form = document.getElementById('create-form');
+            form.classList.toggle('visible');
+        }
+
+        function createGame() {
+            var name = document.getElementById('create-name').value.trim() || 'Pioneer Party';
+            var password = document.getElementById('create-password').value;
+            var maxPlayers = parseInt(document.getElementById('create-max-players').value) || 0;
+
+            fetch('/api/lobbies/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, password: password, max_players: maxPlayers })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.id) {
+                    selectedLobbyID = data.id;
+                    // Auto-join the created room
+                    playerName = document.getElementById('player-name').value.trim() || 'Pioneer';
+                    connectWs(playerName, data.id, password);
+                }
+            })
+            .catch(function(err) {
+                alert('Failed to create game: ' + err);
+            });
+        }
+
+        /* -- Join game -- */
+        function joinGame() {
+            playerName = document.getElementById('player-name').value.trim() || 'Pioneer';
+            var password = document.getElementById('lobby-password').value || '';
+            var roomID = selectedLobbyID || 'continuous';
+            connectWs(playerName, roomID, password);
+        }
+
+        function connectWs(name, roomID, password) {
+            stopLobbyPolling();
+            currentRoomID = roomID;
+
+            // Preflight check for bans/full rooms before upgrading
+            var checkUrl = '/ws?name=' + encodeURIComponent(name)
+                + '&room=' + encodeURIComponent(roomID)
+                + '&preflight=1';
+            if (password) {
+                checkUrl += '&password=' + encodeURIComponent(password);
+            }
+            fetch(checkUrl).then(function(resp) {
+                if (!resp.ok) {
+                    return resp.text().then(function(msg) {
+                        alert(msg.trim() || 'Cannot join this game.');
+                        showLoginScreen();
+                        throw new Error('blocked');
+                    });
+                }
+                openWsConnection(name, roomID, password);
+            }).catch(function(err) {
+                if (err.message !== 'blocked') {
+                    // Network error — try connecting anyway
+                    openWsConnection(name, roomID, password);
+                }
+            });
+        }
+
+        function openWsConnection(name, roomID, password) {
+            var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            var url = protocol + '//' + window.location.host + '/ws?name=' + encodeURIComponent(name)
+                + '&room=' + encodeURIComponent(roomID);
+            if (password) {
+                url += '&password=' + encodeURIComponent(password);
+            }
+
+            ws = new WebSocket(url);
+
+            ws.onopen = function() {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('resuming-screen').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+                document.getElementById('game-over').classList.add('hidden');
+                gameIsOver = false;
+                addCard('system', 'Trail Dispatch', 'scroll', [
+                    'Connected to the Online Trail!',
+                    'Your wagon is ready. Choose your action below.'
+                ]);
+            };
+
+            ws.onmessage = function(event) {
+                var msg = JSON.parse(event.data);
+
+                if (msg.type === 'your_id') {
+                    clientId = msg.client_id;
+                    if (msg.room_id) currentRoomID = msg.room_id;
+                    if (msg.resumed) {
+                        playerName = msg.name || playerName;
+                        addCard('system', 'Welcome Back', 'scroll', [
+                            'Session restored! Welcome back, ' + playerName + '.',
+                            'Your wagon train continues.'
+                        ]);
+                    }
+                } else if (msg.type === 'state') {
+                    updateState(msg.data);
+                } else if (msg.type === 'event') {
+                    handleEvent(msg.data);
+                } else if (msg.type === 'chat') {
+                    handleChat(msg.data);
+                } else if (msg.type === 'kicked') {
+                    alert(msg.reason || 'You have been kicked from the game.');
+                    document.cookie = 'session_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                    ws = null;
+                    showLoginScreen();
+                }
+            };
+
+            ws.onclose = function() {
+                if (!gameIsOver) {
+                    addCard('danger', 'Disconnected', 'warning', [
+                        'Lost connection to the server.',
+                        'Refresh the page to reconnect.'
+                    ]);
+                }
+            };
+
+            ws.onerror = function() {
+                // If connection fails (wrong password, room full, etc.), show login again
+                showLoginScreen();
+            };
+        }
+
+        function showLoginScreen() {
+            gameIsOver = false;
+            myPlayerDead = false;
+            chatOpen = false;
+            chatUnread = 0;
+            fortPrices = null;
+            fortQty = {};
+            fortSellQty = {};
+            huntState = 'idle';
+            riderActive = false;
+            prevPartyHealth = [];
+            document.getElementById('fort-overlay').classList.add('hidden');
+            document.getElementById('hunt-overlay').classList.add('hidden');
+            document.getElementById('rider-overlay').classList.add('hidden');
+            document.getElementById('spectator-banner').classList.add('hidden');
+            document.getElementById('chat-panel').classList.add('collapsed');
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('game-over').classList.add('hidden');
+            document.getElementById('resuming-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('game-log').innerHTML = '';
+            document.getElementById('chat-messages').innerHTML = '';
+            startLobbyPolling();
+            loadLeaderboard('login-leaderboard');
+        }
+
+        /* -- Chat panel -- */
+        function toggleChat() {
+            var panel = document.getElementById('chat-panel');
+            chatOpen = !chatOpen;
+            if (chatOpen) {
+                panel.classList.remove('collapsed');
+                chatUnread = 0;
+                updateChatBadge();
+                var msgs = document.getElementById('chat-messages');
+                msgs.scrollTop = msgs.scrollHeight;
+                document.getElementById('chat-input').focus();
+            } else {
+                panel.classList.add('collapsed');
+            }
+        }
+
+        function updateChatBadge() {
+            var badge = document.getElementById('chat-badge');
+            var btn = document.querySelector('.chat-toggle-btn');
+            if (chatUnread > 0) {
+                badge.textContent = chatUnread > 99 ? '99+' : chatUnread;
+                badge.classList.add('visible');
+                btn.classList.add('has-unread');
+            } else {
+                badge.classList.remove('visible');
+                btn.classList.remove('has-unread');
+            }
+        }
+
+        function sendChat() {
+            var input = document.getElementById('chat-input');
+            var message = input.value.trim();
+            if (!message || !ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'chat', message: message }));
+            input.value = '';
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.target.id === 'chat-input' && e.key === 'Enter') {
+                sendChat();
+            }
+        });
+
+        function handleChat(data) {
+            var msgs = document.getElementById('chat-messages');
+            var el = document.createElement('div');
+            el.className = 'chat-msg';
+            el.innerHTML = '<div class="chat-msg-name">' + escapeHtml(data.player) + '</div>'
+                + '<div class="chat-msg-text">' + escapeHtml(data.message) + '</div>';
+            msgs.appendChild(el);
+            msgs.scrollTop = msgs.scrollHeight;
+
+            if (!chatOpen) {
+                chatUnread++;
+                updateChatBadge();
+            }
+        }
+
+        /* -- Fort Shop -- */
+        function enterFort() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'fort_enter' }));
+        }
+
+        var fortItemIcons = {
+            food: '\u{1F356}',
+            bullets: '\u{1F4A5}',
+            clothing: '\u{1F455}',
+            misc: '\u{1F48A}'
+        };
+        var fortStockLabels = {
+            food: 'food',
+            bullets: 'bullets',
+            clothing: 'clothing',
+            misc: 'supplies'
+        };
+
+        function showFortShop(state) {
+            fortPrices = state.fort_prices;
+            if (!fortPrices) return;
+
+            var cash = state.cash || 0;
+            document.getElementById('fort-cash').textContent = '$' + Math.floor(cash);
+
+            var isAlreadyOpen = !document.getElementById('fort-overlay').classList.contains('hidden');
+
+            var stockValues = {
+                food: Math.floor(state.food),
+                bullets: Math.floor(state.bullets),
+                clothing: Math.floor(state.clothing),
+                misc: Math.floor(state.misc_supplies)
+            };
+
+            var items = ['food', 'bullets', 'clothing', 'misc'];
+
+            if (isAlreadyOpen) {
+                items.forEach(function(key) {
+                    var stockEl = document.getElementById('fort-stock-' + key);
+                    if (stockEl) stockEl.textContent = 'Current: ' + stockValues[key] + ' ' + fortStockLabels[key];
+                });
+                fortUpdateButtons(cash);
+                return;
+            }
+
+            document.getElementById('fort-receipt').textContent = '';
+            var container = document.getElementById('fort-items');
+            container.innerHTML = '';
+
+            items.forEach(function(key) {
+                var item = fortPrices[key];
+                if (!item) return;
+                fortQty[key] = 1;
+                fortSellQty[key] = 1;  // Start at 1 so minus button works
+
+                var card = document.createElement('div');
+                card.className = 'fort-item-card';
+                card.id = 'fort-card-' + key;
+                card.innerHTML =
+                    '<span class="fort-item-icon">' + fortItemIcons[key] + '</span>' +
+                    '<div class="fort-item-name">' + escapeHtml(item.label) + '</div>' +
+                    '<div class="fort-item-stock" id="fort-stock-' + key + '">Current: ' + stockValues[key] + ' ' + fortStockLabels[key] + '</div>' +
+                    '<div class="fort-item-price">Buy: $' + item.price + ' | Sell: $' + Math.floor(item.price * 0.5) + '</div>' +
+                    '<div class="fort-qty-row">' +
+                        '<button class="fort-qty-btn" onclick="fortChangeQty(\'' + key + '\', -1)" id="fort-minus-' + key + '">-</button>' +
+                        '<span class="fort-qty-val" id="fort-qty-' + key + '">1</span>' +
+                        '<button class="fort-qty-btn" onclick="fortChangeQty(\'' + key + '\', 1)" id="fort-plus-' + key + '">+</button>' +
+                    '</div>' +
+                    '<div class="fort-item-total" id="fort-total-' + key + '">Total: $' + item.price + '</div>' +
+                    '<button class="fort-buy-btn" id="fort-buy-' + key + '" onclick="fortBuy(\'' + key + '\')">Buy</button>' +
+                    '<div class="fort-sell-section" style="margin-top: 8px; border-top: 1px solid #3a3a3a; padding-top: 8px;">' +
+                        '<div class="fort-qty-row">' +
+                            '<button class="fort-qty-btn" onclick="fortChangeSellQty(\'' + key + '\', -1)" id="fort-sell-minus-' + key + '">-</button>' +
+                            '<span class="fort-qty-val" id="fort-sell-qty-' + key + '">1</span>' +
+                            '<button class="fort-qty-btn" onclick="fortChangeSellQty(\'' + key + '\', 1)" id="fort-sell-plus-' + key + '">+</button>' +
+                        '</div>' +
+                        '<div class="fort-item-total" id="fort-sell-total-' + key + '">Earn: $' + Math.floor(item.price * 0.5) + '</div>' +
+                        '<button class="fort-buy-btn" style="background: #c49a6c;" id="fort-sell-' + key + '" onclick="fortSell(\'' + key + '\')">Sell</button>' +
+                    '</div>';
+                container.appendChild(card);
+            });
+
+            fortUpdateButtons(cash);
+            document.getElementById('fort-overlay').classList.remove('hidden');
+        }
+
+        function hideFortShop() {
+            document.getElementById('fort-overlay').classList.add('hidden');
+            fortPrices = null;
+        }
+
+        function fortChangeQty(key, delta) {
+            var item = fortPrices[key];
+            if (!item) return;
+            var qty = (fortQty[key] || 1) + delta;
+            if (qty < 1) qty = 1;
+            var maxQty = Math.floor((prevState.cash || 0) / item.price);
+            if (maxQty < 1) maxQty = 1;
+            if (qty > maxQty) qty = maxQty;
+            fortQty[key] = qty;
+
+            document.getElementById('fort-qty-' + key).textContent = qty;
+            document.getElementById('fort-total-' + key).textContent = 'Total: $' + (qty * item.price);
+            fortUpdateButtons(prevState.cash || 0);
+        }
+
+        function fortUpdateButtons(cash) {
+            if (!fortPrices) return;
+            var items = ['food', 'bullets', 'clothing', 'misc'];
+            items.forEach(function(key) {
+                var item = fortPrices[key];
+                if (!item) return;
+                var qty = fortQty[key] || 1;
+                var cost = qty * item.price;
+                var buyBtn = document.getElementById('fort-buy-' + key);
+                var plusBtn = document.getElementById('fort-plus-' + key);
+                var minusBtn = document.getElementById('fort-minus-' + key);
+                if (buyBtn) buyBtn.disabled = cost > cash;
+                if (plusBtn) plusBtn.disabled = (qty + 1) * item.price > cash;
+                if (minusBtn) minusBtn.disabled = qty <= 1;
+
+                // Update sell button based on current stock
+                var currentStock = Math.floor(prevState[key] || 0);
+                var sellQty = fortSellQty[key] || 1;
+                var sellBtn = document.getElementById('fort-sell-' + key);
+                var sellMinusBtn = document.getElementById('fort-sell-minus-' + key);
+                var sellPlusBtn = document.getElementById('fort-sell-plus-' + key);
+                if (sellBtn) sellBtn.disabled = sellQty > currentStock;
+                if (sellMinusBtn) sellMinusBtn.disabled = sellQty <= 1;
+                if (sellPlusBtn) sellPlusBtn.disabled = sellQty >= Math.floor(currentStock / (item.qty || 1));
+            });
+        }
+
+        function fortBuy(key) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            var qty = fortQty[key] || 1;
+            ws.send(JSON.stringify({ type: 'fort_buy', item: key, qty: qty }));
+            fortQty[key] = 1;
+            var qtyEl = document.getElementById('fort-qty-' + key);
+            if (qtyEl) qtyEl.textContent = '1';
+            var item = fortPrices[key];
+            if (item) {
+                var totalEl = document.getElementById('fort-total-' + key);
+                if (totalEl) totalEl.textContent = 'Total: $' + item.price;
+            }
+        }
+
+        function fortLeave() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'fort_leave' }));
+        }
+
+        function fortChangeSellQty(key, delta) {
+            var item = fortPrices[key];
+            if (!item) return;
+            
+            var currentStock = Math.floor(prevState[key] || 0);
+            var packSize = item.qty || 1;
+            var maxQty = Math.floor(currentStock / packSize);
+            if (maxQty < 1) maxQty = 1;
+            
+            var qty = (fortSellQty[key] || 1) + delta;
+            if (qty < 1) qty = 1;
+            if (qty > maxQty) qty = maxQty;
+            
+            fortSellQty[key] = qty;
+
+            document.getElementById('fort-sell-qty-' + key).textContent = qty;
+            
+            var sellPrice = Math.floor(item.price * 0.5);
+            document.getElementById('fort-sell-total-' + key).textContent = 'Earn: $' + (qty * sellPrice);
+            
+            // Enable/disable sell button based on stock
+            var sellBtn = document.getElementById('fort-sell-' + key);
+            if (sellBtn) sellBtn.disabled = qty > currentStock;
+        }
+
+        /* -- Loot Site Functions -- */
+        var currentLootSite = null;
+
+        function showLootSiteModal(site) {
+            currentLootSite = site;
+            var overlay = document.getElementById('loot-overlay');
+            var infoDiv = document.getElementById('loot-info');
+            var claimBtn = document.getElementById('loot-claim-btn');
+
+            if (!overlay || !infoDiv || !claimBtn) return;
+
+            // Calculate time since death
+            var dateCreated = site.date_created ? new Date(site.date_created) : new Date();
+            var now = new Date();
+            var daysAgo = Math.floor((now - dateCreated) / (1000 * 60 * 60 * 24));
+
+            var statusText = site.is_looted ?
+                '<span style="color: #808080;">Already looted by ' + escapeHtml(site.looted_by || 'unknown') + '</span>' :
+                '<span style="color: #FFD700;">LOOT AVAILABLE!</span>';
+
+            infoDiv.innerHTML =
+                '<div class="loot-info-row"><span>Wagon of:</span><span>' + escapeHtml(site.player_name || 'Unknown') + '</span></div>' +
+                '<div class="loot-info-row"><span>Location:</span><span>Mile ' + Math.floor(site.mileage || 0) + '</span></div>' +
+                '<div class="loot-info-row"><span>Status:</span>' + statusText + '</div>' +
+                (daysAgo > 0 ? '<div class="loot-info-row"><span>Abandoned:</span><span>' + daysAgo + ' day' + (daysAgo === 1 ? '' : 's') + ' ago</span></div>' : '') +
+                '<div style="margin-top: 15px; padding-top: 10px; border-top: 2px solid rgba(255,215,0,0.3); font-weight: bold; color: #FFD700;">Contents:</div>' +
+                '<div class="loot-info-row"><span>Cash:</span><span>$' + Math.floor(site.cash || 0) + '</span></div>' +
+                '<div class="loot-info-row"><span>Food:</span><span>' + Math.floor(site.food || 0) + ' lbs</span></div>' +
+                '<div class="loot-info-row"><span>Bullets:</span><span>' + Math.floor(site.bullets || 0) + '</span></div>' +
+                '<div class="loot-info-row"><span>Clothing:</span><span>' + Math.floor(site.clothing || 0) + '</span></div>' +
+                '<div class="loot-info-row"><span>Misc:</span><span>' + Math.floor(site.misc_supplies || 0) + '</span></div>';
+
+            if (!claimBtn) return;
+
+            if (site.is_looted) {
+                claimBtn.textContent = 'Already Looted';
+                claimBtn.disabled = true;
+                claimBtn.style.opacity = '0.5';
+                claimBtn.style.cursor = 'not-allowed';
+            } else {
+                claimBtn.textContent = 'Loot Wagon';
+                claimBtn.disabled = false;
+                claimBtn.style.opacity = '1';
+                claimBtn.style.cursor = 'pointer';
+            }
+
+            if (overlay) {
+                overlay.classList.remove('hidden');
+            }
+        }
+
+        function hideLootOverlay() {
+            document.getElementById('loot-overlay').classList.add('hidden');
+            currentLootSite = null;
+        }
+
+        function claimLoot() {
+            if (!ws || ws.readyState !== WebSocket.OPEN || !currentLootSite) return;
+            ws.send(JSON.stringify({ type: 'loot_claim', loot_site_id: currentLootSite.id }));
+            hideLootOverlay();
+        }
+
+        function fortSell(key) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            var qty = fortSellQty[key] || 1;
+            ws.send(JSON.stringify({ type: 'fort_sell', item: key, qty: qty }));
+            fortSellQty[key] = 1;
+            var qtyEl = document.getElementById('fort-sell-qty-' + key);
+            if (qtyEl) qtyEl.textContent = '1';
+            var item = fortPrices[key];
+            if (item) {
+                var sellPrice = Math.floor(item.price * 0.5);
+                var totalEl = document.getElementById('fort-sell-total-' + key);
+                if (totalEl) totalEl.textContent = 'Earn: $' + sellPrice;
+            }
+        }
+
+        /* -- Kick player -- */
+        function kickPlayer(targetID) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            if (!confirm('Kick this player from the game?')) return;
+            ws.send(JSON.stringify({ type: 'kick', target_id: targetID }));
+        }
+
+        /* -- Logout -- */
+        function logout() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'logout' }));
+            }
+            document.cookie = 'session_id=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+            ws = null;
+            showLoginScreen();
+        }
+
+        /* -- Game Reset -- */
+        function resetGame() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('Connection lost. Please refresh the page.');
+                return;
+            }
+            ws.send(JSON.stringify({ type: 'reset' }));
+        }
+
+        /* -- Leaderboard -- */
+        function loadLeaderboard(containerId) {
+            var container = document.getElementById(containerId);
+            if (!container) {
+                console.error('Leaderboard container not found:', containerId);
+                return;
+            }
+            // Show loading state immediately
+            container.classList.remove('hidden');
+            container.innerHTML = '<h3>Hall of Fame</h3><div class="leaderboard-empty">Loading...</div>';
+            
+            fetch('/api/leaderboard').then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            }).then(function(text) {
+                console.log('Leaderboard raw response:', text);
+                var data;
+                try {
+                    data = JSON.parse(text);
+                } catch(e) {
+                    console.error('Failed to parse leaderboard JSON:', e);
+                    container.innerHTML = '<h3>Hall of Fame</h3><div class="leaderboard-empty">Error loading data</div>';
+                    return;
+                }
+                console.log('Leaderboard parsed data:', data);
+                data = data || {};
+                var publicEntries = data.continuous || [];
+                var privateEntries = data.party || [];
+                var html = '<h3>Hall of Fame</h3><div class="leaderboard-columns">';
+                html += '<div class="leaderboard-col"><h4>Public Trail</h4>' + renderLeaderboardTable(publicEntries) + '</div>';
+                html += '<div class="leaderboard-col"><h4>Private Games</h4>' + renderLeaderboardTable(privateEntries) + '</div>';
+                html += '</div>';
+                container.innerHTML = html;
+            }).catch(function(err) {
+                console.error('Leaderboard error:', err);
+                container.innerHTML = '<h3>Hall of Fame</h3><div class="leaderboard-empty">Could not load leaderboard</div>';
+            });
+        }
+
+        function renderLeaderboardTable(entries) {
+            if (!entries || entries.length === 0) {
+                return '<div class="leaderboard-empty">No records yet</div>';
+            }
+            var html = '<table><thead><tr><th>#</th><th>Pioneer</th><th>Result</th><th>Miles</th></tr></thead><tbody>';
+            entries.forEach(function(e, i) {
+                var cls = e.won ? 'won' : 'lost';
+                var result = e.won ? 'Online!' : 'Perished';
+                html += '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(e.player_name) + '</td><td class="' + cls + '">' + result + '</td><td>' + Math.floor(e.miles) + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            return html;
+        }
+
+        function escapeHtml(text) {
+            var d = document.createElement('div');
+            d.textContent = text;
+            return d.innerHTML;
+        }
+
+        /* -- Classify a single line of game text -- */
+        function classifyLine(line) {
+            var u = line.toUpperCase();
+            if (/DIED|STARVED|DEATH|MASSACRED|RAN OUT OF.*BULLET|OVERPOWERED/.test(u))
+                return 'line-danger';
+            if (/BETWEEN THE EYES|FULL BELLIES|NICE SHOT|NICE SHOOT|RIGHT ON TARGET|GOT A BIG|DROVE THEM OFF|CONGRATULATIONS|CROSSED SAFELY|MADE IT ACROSS|SAFE CROSSING|GOOD EATIN|YOU GOT 'EM/.test(u))
+                return 'line-success';
+            if (/ILLNESS|BROKE|SWAMP|DAMAGE|BANDITS|FIRE|SNAKE|HAIL|FOG|LOST|UNSAFE|HEAVY RAIN|BLIZZARD|COLD WEATHER|WAGON BREAK|OX INJUR|OX WANDER|GOT KNIFED|DOCTOR|SLOW ON THE DRAW|LOUSY SHOT|GOT SICK|HOSTILE|RAN AWAY|RAN OUT OF/.test(u))
+                return 'line-warning';
+            return '';
+        }
+
+        /* -- Determine card theme from action + text content -- */
+        function getCardInfo(action, text) {
+            var u = text.toUpperCase();
+            if (/DIED|STARVED|DEATH|MASSACRED/.test(u))
+                return { theme: 'danger', title: 'Disaster', icon: 'skull' };
+
+            switch (action) {
+                case 'hunt':
+                    return { theme: 'hunt', title: 'Hunting', icon: 'crosshair' };
+                case 'fort':
+                    return { theme: 'fort', title: 'Fort Trading Post', icon: 'store' };
+                case 'continue':
+                    if (/RIVER|CROSSING/.test(u))
+                        return { theme: 'travel', title: 'River Crossing', icon: 'waves' };
+                    if (/MOUNTAIN|RUGGED|BLIZZARD/.test(u))
+                        return { theme: 'danger', title: 'Mountain Pass', icon: 'mountain' };
+                    if (/RIDERS/.test(u))
+                        return { theme: 'danger', title: 'Riders Spotted', icon: 'alert' };
+                    return { theme: 'travel', title: 'On The Trail', icon: 'wagon' };
+                default:
+                    return { theme: 'system', title: 'Trail Update', icon: 'scroll' };
+            }
+        }
+
+        /* -- Icon lookup (simple SVG-based) -- */
+        function getIcon(name) {
+            var icons = {
+                crosshair: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>',
+                wagon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="19" r="3"/><path d="M3 19h0M21 19h0M3 16V8a2 2 0 012-2h10l4 4v6"/></svg>',
+                store: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+                skull: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="8"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="15" cy="9" r="1.5" fill="currentColor"/><path d="M8 22v-4M12 22v-4M16 22v-4M8 18h8"/></svg>',
+                waves: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M2 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/></svg>',
+                mountain: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21l4-10 4 10"/><path d="M2 21l6-12 3.5 7"/><path d="M22 21l-6-12-3.5 7"/></svg>',
+                alert: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+                scroll: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+                warning: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+                chat: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>',
+            };
+            return icons[name] || icons.scroll;
+        }
+
+        /* -- Format numbers in a line -- */
+        function formatLine(text) {
+            var s = text
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/(\+\d+\.?\d*\s*food)/gi, '<span class="num">$1</span>')
+                .replace(/(\+\d+\.?\d*)/g, '<span class="num">$1</span>')
+                .replace(/([\d,]+\.?\d*\s*miles?)/gi, '<span class="num">$1</span>')
+                .replace(/(\$[\d,]+\.?\d*)/g, '<span class="num">$1</span>');
+            return s;
+        }
+
+        /* -- Add a styled card to the game log -- */
+        function addCard(theme, title, icon, lines) {
+            var logEl = document.getElementById('game-log');
+            var card = document.createElement('div');
+            card.className = 'turn-card ' + theme;
+
+            var headerHtml = '<div class="turn-card-header">'
+                + '<span class="card-icon">' + getIcon(icon) + '</span>'
+                + title
+                + '</div>';
+
+            var bodyHtml = '<div class="turn-card-body">';
+            lines.forEach(function(line) {
+                var cls = classifyLine(line);
+                bodyHtml += '<div class="turn-card-line ' + cls + '">' + formatLine(line) + '</div>';
+            });
+            bodyHtml += '</div>';
+
+            card.innerHTML = headerHtml + bodyHtml;
+            logEl.appendChild(card);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        /* -- Handle an event broadcast from the server -- */
+        function handleEvent(data) {
+            if (!data) return;
+            var who = data.player || 'Unknown';
+            var action = data.action || '';
+            var resultText = data.result || '';
+
+            // Fort purchase events: show receipt in overlay instead of log
+            if (action === 'fort' && fortPrices && !document.getElementById('fort-overlay').classList.contains('hidden')) {
+                var receiptEl = document.getElementById('fort-receipt');
+                if (receiptEl && resultText.trim()) {
+                    receiptEl.textContent = resultText.trim();
+                }
+                return;
+            }
+
+            var lines = resultText.split('\n').filter(function(l) { return l.trim(); });
+
+            if (lines.length === 0) {
+                var info = getCardInfo(action, '');
+                addCard('player', who + ' ' + getActionVerb(action), info.icon, [getActionDescription(action)]);
+                return;
+            }
+
+            var info = getCardInfo(action, resultText);
+            var title = who + ' \u2014 ' + info.title;
+            addCard(info.theme, title, info.icon, lines);
+        }
+
+        function getActionVerb(action) {
+            switch(action) {
+                case 'hunt': return 'went hunting';
+                case 'fort': return 'visited a fort';
+                case 'continue': return 'continued west';
+                default: return 'took an action';
+            }
+        }
+
+        function getActionDescription(action) {
+            switch(action) {
+                case 'hunt': return 'Heading out to hunt for food.';
+                case 'fort': return 'Stopping at the trading post.';
+                case 'continue': return 'The wagon train pushes onward.';
+                default: return 'Something happened on the trail.';
+            }
+        }
+
+        function takeAction(action) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'action', action: action }));
+        }
+
+        function updateState(state) {
+            // If game was over but now isn't, we got a reset
+            if (gameIsOver && !state.game_over) {
+                gameIsOver = false;
+                myPlayerDead = false;
+                document.getElementById('game-over').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+                document.getElementById('spectator-banner').classList.add('hidden');
+                document.getElementById('game-log').innerHTML = '';
+                document.getElementById('chat-messages').innerHTML = '';
+                chatUnread = 0;
+                prevPartyHealth = [];
+                huntState = 'idle';
+                riderActive = false;
+                fortPrices = null;
+                document.getElementById('hunt-overlay').classList.add('hidden');
+                document.getElementById('rider-overlay').classList.add('hidden');
+                document.getElementById('fort-overlay').classList.add('hidden');
+                updateChatBadge();
+                addCard('system', 'New Journey', 'scroll', [
+                    'The wagon train has been restocked!',
+                    'A fresh adventure begins.'
+                ]);
+            }
+
+            // Detect if my player is dead
+            var wasAlive = !myPlayerDead;
+            if (state.players) {
+                state.players.forEach(function(p) {
+                    if (p.id === clientId) {
+                        myPlayerDead = !p.player_alive;
+                    }
+                });
+            }
+
+            // Update room info
+            if (state.room_name) {
+                document.getElementById('room-name-badge').textContent = state.room_name;
+            }
+            if (state.owner_id) {
+                currentOwnerID = state.owner_id;
+            }
+
+            // Animate value changes
+            animateValue('food', Math.floor(state.food));
+            animateValue('bullets', Math.floor(state.bullets));
+            animateValue('clothing', Math.floor(state.clothing));
+            animateValue('misc', Math.floor(state.misc_supplies));
+
+            document.getElementById('turn-number').textContent = state.turn_number;
+            document.getElementById('mileage').textContent = Math.floor(state.mileage);
+            document.getElementById('cash').textContent = '$' + Math.floor(state.cash);
+            document.getElementById('oxen').textContent = '$' + Math.floor(state.oxen_cost || 220);
+
+            var progress = Math.min(((state.mileage || 0) / 4500) * 100, 100);
+            document.getElementById('progress-fill').style.width = progress + '%';
+
+            // Update loot site markers
+            var lootMarkersContainer = document.getElementById('loot-markers-container');
+            if (lootMarkersContainer) {
+                lootMarkersContainer.innerHTML = '';
+                if (state.loot_sites && Array.isArray(state.loot_sites) && state.loot_sites.length > 0) {
+                    state.loot_sites.forEach(function(site) {
+                        if (!site || !site.mileage) return;
+                        var marker = document.createElement('div');
+                        var markerClass = site.is_looted ? 'loot-marker looted' : 'loot-marker available';
+                        marker.className = markerClass;
+                        marker.style.left = Math.min((site.mileage / 4500) * 100, 100) + '%';
+                        marker.title = (site.player_name || 'Unknown') + "'s wagon at mile " + Math.floor(site.mileage) +
+                                     (site.is_looted ? ' (Looted by ' + (site.looted_by || 'unknown') + ')' : ' - LOOT AVAILABLE!');
+                        marker.onclick = function() {
+                            showLootSiteModal(site);
+                        };
+                        lootMarkersContainer.appendChild(marker);
+                    });
+                }
+            }
+
+            isMyTurn = state.current_player_id && state.current_player_id === clientId;
+
+            // Update turn timer
+            if (state.turn_deadline && state.game_status === 'playing' && !state.game_over) {
+                turnDeadline = state.turn_deadline;
+                startTurnTimer();
+            } else {
+                turnDeadline = 0;
+                stopTurnTimer();
+            }
+
+            var inFortPhase = state.turn_phase === 'fort';
+            var inHuntPhase = state.turn_phase === 'hunting';
+            var inRiderPhase = state.turn_phase === 'riders';
+            var inOverlay = inFortPhase || inHuntPhase || inRiderPhase;
+            var buttons = document.querySelectorAll('.action-btn');
+
+            // Update party health — use per-player map so each client sees their own party
+            var myPartyHealth = null;
+            if (state.party_health_map && state.party_health_map[clientId]) {
+                myPartyHealth = state.party_health_map[clientId];
+            } else if (state.party_health) {
+                myPartyHealth = state.party_health;
+            }
+            if (myPartyHealth) {
+                updatePartyHealth(myPartyHealth);
+            }
+
+            // Handle hunting overlay (don't show for dead spectators)
+            if (inHuntPhase && isMyTurn && !myPlayerDead && huntState === 'idle') {
+                showHuntOverlay(state.hunt_word || 'BANG');
+            } else if (!inHuntPhase) {
+                if (huntState !== 'idle') {
+                    // Phase changed away from hunting — close overlay
+                    hideHuntOverlay();
+                }
+            }
+
+            // Handle rider overlay (don't show for dead spectators)
+            if (inRiderPhase && !myPlayerDead) {
+                showRiderOverlay(state);
+            } else if (inRiderPhase && myPlayerDead && riderActive) {
+                hideRiderOverlay();
+            } else if (!inRiderPhase && riderActive) {
+                hideRiderOverlay();
+            }
+
+            // Show/hide fort button based on availability
+            var fortBtn = document.getElementById('btn-fort');
+            if (state.fort_available && isMyTurn && !myPlayerDead && !inOverlay) {
+                fortBtn.classList.remove('hidden');
+            } else {
+                fortBtn.classList.add('hidden');
+            }
+
+            // Fort phase: show shop overlay for current player, disable actions for everyone
+            if (inFortPhase && isMyTurn && !myPlayerDead) {
+                buttons.forEach(function(btn) {
+                    btn.disabled = true;
+                    btn.classList.remove('your-turn-pulse');
+                });
+                showFortShop(state);
+            } else if (inFortPhase) {
+                buttons.forEach(function(btn) {
+                    btn.disabled = true;
+                    btn.classList.remove('your-turn-pulse');
+                });
+                hideFortShop();
+            } else if (inOverlay) {
+                // Hunting or rider phase — disable action buttons
+                hideFortShop();
+                buttons.forEach(function(btn) {
+                    btn.disabled = true;
+                    btn.classList.remove('your-turn-pulse');
+                });
+            } else {
+                hideFortShop();
+                buttons.forEach(function(btn) {
+                    // Don't disable the fort button here (it's handled separately)
+                    if (btn.id !== 'btn-fort') {
+                        btn.disabled = !isMyTurn || myPlayerDead;
+                        if (isMyTurn && !myPlayerDead) btn.classList.add('your-turn-pulse');
+                        else btn.classList.remove('your-turn-pulse');
+                    }
+                });
+                // Handle fort button separately
+                if (fortBtn && !fortBtn.classList.contains('hidden')) {
+                    fortBtn.disabled = false;
+                    fortBtn.classList.add('your-turn-pulse');
+                }
+            }
+
+            // Show/hide spectator banner
+            var spectatorBanner = document.getElementById('spectator-banner');
+            if (myPlayerDead && !state.game_over) {
+                spectatorBanner.classList.remove('hidden');
+                var subtitle = document.getElementById('spectator-subtitle');
+                subtitle.textContent = 'Your party perished at mile ' + Math.floor(state.mileage) + '. You can still watch and chat.';
+                // Show death notification card once
+                if (wasAlive) {
+                    addCard('death', 'You Have Fallen', 'skull', [
+                        'Your party leader has died.',
+                        'You are now spectating the remaining pioneers.',
+                        'You can still chat with other players.'
+                    ]);
+                }
+            } else {
+                spectatorBanner.classList.add('hidden');
+            }
+
+            // Update game status
+            var playerCount = state.players ? state.players.length : 1;
+            var statusEl = document.getElementById('game-status');
+            if (myPlayerDead && !state.game_over) {
+                var currentName = 'Someone';
+                if (state.players) {
+                    state.players.forEach(function(p) {
+                        if (p.id === state.current_player_id) currentName = p.name;
+                    });
+                }
+                statusEl.textContent = 'Spectating \u2014 ' + currentName + '\'s turn';
+                statusEl.style.fontWeight = 'normal';
+                statusEl.style.color = '#FF6B6B';
+            } else if (state.game_status === 'waiting') {
+                statusEl.textContent = 'Waiting for game to start...';
+            } else if (inHuntPhase && isMyTurn) {
+                statusEl.textContent = 'Hunting! Take aim and FIRE!';
+                statusEl.style.fontWeight = 'bold';
+                statusEl.style.color = '#228B22';
+            } else if (inHuntPhase) {
+                var hunterName = 'A pioneer';
+                if (state.players) {
+                    state.players.forEach(function(p) {
+                        if (p.id === state.current_player_id) hunterName = p.name;
+                    });
+                }
+                statusEl.textContent = hunterName + ' is hunting...';
+                statusEl.style.fontWeight = 'normal';
+                statusEl.style.color = '#228B22';
+            } else if (inRiderPhase && isMyTurn) {
+                statusEl.textContent = 'Riders spotted! Choose your tactic!';
+                statusEl.style.fontWeight = 'bold';
+                statusEl.style.color = '#FF4444';
+            } else if (inRiderPhase) {
+                var tacticName = 'A pioneer';
+                if (state.players) {
+                    state.players.forEach(function(p) {
+                        if (p.id === state.current_player_id) tacticName = p.name;
+                    });
+                }
+                statusEl.textContent = tacticName + ' is dealing with riders...';
+                statusEl.style.fontWeight = 'normal';
+                statusEl.style.color = '#FF4444';
+            } else if (inFortPhase && isMyTurn) {
+                statusEl.textContent = 'Trade Post! Browse supplies \u2014 no time limit';
+                statusEl.style.fontWeight = 'bold';
+                statusEl.style.color = '#DAA520';
+            } else if (inFortPhase) {
+                var shopperName = 'A pioneer';
+                if (state.players) {
+                    state.players.forEach(function(p) {
+                        if (p.id === state.current_player_id) shopperName = p.name;
+                    });
+                }
+                statusEl.textContent = shopperName + ' is at the trade post...';
+                statusEl.style.fontWeight = 'normal';
+                statusEl.style.color = '#DAA520';
+            } else if (isMyTurn) {
+                statusEl.textContent = 'Your turn \u2014 Choose an action!';
+                statusEl.style.fontWeight = 'bold';
+                statusEl.style.color = '#228B22';
+            } else if (playerCount === 1 && state.turn_number > 0) {
+                statusEl.textContent = 'Solo adventurer on the trail';
+                statusEl.style.fontWeight = 'normal';
+                statusEl.style.color = '#4A2810';
+            } else {
+                statusEl.textContent = playerCount + ' pioneers on the trail \u2014 waiting for your turn';
+                statusEl.style.fontWeight = 'normal';
+                statusEl.style.color = '#4A2810';
+            }
+
+            // Update scoreboard with kick buttons
+            if (state.players) {
+                var isOwner = (clientId === currentOwnerID);
+                var html = '';
+                state.players.forEach(function(p) {
+                    var isActive = p.id === state.current_player_id;
+                    var isDead = !p.player_alive;
+                    var statusClass, statusText;
+                    if (isDead) {
+                        statusClass = 'status-dead';
+                        statusText = '\u{1F480} Dead';
+                    } else if (isActive) {
+                        statusClass = 'status-playing';
+                        statusText = 'Playing';
+                    } else {
+                        statusClass = 'status-waiting';
+                        statusText = 'Waiting';
+                    }
+                    var rowClass = isActive && !isDead ? 'active' : '';
+                    var you = p.id === clientId ? ' (You)' : '';
+                    var kickHtml = '';
+                    if (isOwner && p.id !== clientId) {
+                        kickHtml = '<button class="kick-btn" onclick="kickPlayer(\'' + p.id + '\')">Kick</button>';
+                    }
+                    html += '<tr class="' + rowClass + '">'
+                        + '<td>' + escapeHtml(p.name) + you + '</td>'
+                        + '<td class="' + statusClass + '">' + statusText + '</td>'
+                        + '<td>' + p.score + '</td>'
+                        + '<td>' + kickHtml + '</td>'
+                        + '</tr>';
+                });
+                document.getElementById('player-list').innerHTML = html;
+            }
+
+            prevState = state;
+            if (state.game_over) showGameOver(state);
+        }
+
+        /* -- Flash a status value green/red on change -- */
+        function animateValue(id, newVal) {
+            var el = document.getElementById(id);
+            var oldVal = parseInt(el.textContent) || 0;
+            el.textContent = newVal;
+            if (newVal > oldVal) {
+                el.classList.add('flash-green');
+                setTimeout(function() { el.classList.remove('flash-green'); }, 600);
+            } else if (newVal < oldVal) {
+                el.classList.add('flash-red');
+                setTimeout(function() { el.classList.remove('flash-red'); }, 600);
+            }
+        }
+
+        /* ======== TURN TIMER ======== */
+        function startTurnTimer() {
+            updateTimerDisplay();
+            if (turnTimerInterval) return; // already running
+            turnTimerInterval = setInterval(updateTimerDisplay, 250);
+        }
+
+        function stopTurnTimer() {
+            if (turnTimerInterval) {
+                clearInterval(turnTimerInterval);
+                turnTimerInterval = null;
+            }
+            var el = document.getElementById('turn-timer');
+            el.classList.add('hidden');
+            el.classList.remove('urgent');
+        }
+
+        function updateTimerDisplay() {
+            var el = document.getElementById('turn-timer');
+            if (!turnDeadline) {
+                el.classList.add('hidden');
+                return;
+            }
+            var remaining = Math.max(0, Math.ceil((turnDeadline - Date.now()) / 1000));
+            el.textContent = remaining + 's';
+            el.classList.remove('hidden');
+            if (remaining <= 5) {
+                el.classList.add('urgent');
+            } else {
+                el.classList.remove('urgent');
+            }
+            if (remaining <= 0) {
+                stopTurnTimer();
+            }
+        }
+
+        /* ======== PARTY HEALTH ======== */
+        var prevPartyHealth = [];
+
+        function updatePartyHealth(partyHealth) {
+            var container = document.getElementById('party-health');
+            if (!partyHealth || partyHealth.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            var html = '';
+            partyHealth.forEach(function(m, i) {
+                var prevMember = prevPartyHealth[i];
+                var damagedClass = '';
+                if (prevMember && prevMember.health > m.health && m.alive) {
+                    damagedClass = ' damaged';
+                }
+                var deadClass = m.alive ? '' : ' dead';
+
+                var healthPct = Math.max(0, Math.min(100, m.health));
+                var colorClass = healthPct > 60 ? 'health-green' : healthPct > 30 ? 'health-yellow' : 'health-red';
+
+                if (m.alive) {
+                    html += '<div class="party-member' + deadClass + damagedClass + '">'
+                        + '<div class="member-name">' + escapeHtml(m.name) + '</div>'
+                        + '<div class="health-bar"><div class="health-fill ' + colorClass + '" style="width:' + healthPct + '%"></div></div>'
+                        + '<div class="member-hp">' + m.health + ' HP</div>'
+                        + '</div>';
+                } else {
+                    html += '<div class="party-member dead">'
+                        + '<div class="member-skull">&#x1F480;</div>'
+                        + '<div class="member-name member-dead-name">' + escapeHtml(m.name) + '</div>'
+                        + '<div class="member-hp">Dead</div>'
+                        + '</div>';
+                }
+
+                // Check for death notification
+                if (prevMember && prevMember.alive && !m.alive) {
+                    addCard('death', 'Party Loss', 'skull', [
+                        m.name + ' has died on the trail.',
+                        'Rest in peace.'
+                    ]);
+                }
+            });
+
+            container.innerHTML = html;
+            prevPartyHealth = JSON.parse(JSON.stringify(partyHealth));
+        }
+
+        /* ======== HUNTING MINI-GAME ======== */
+        var huntState = 'idle'; // idle, waiting, ready, fired, done
+        var huntStartTime = 0;
+        var huntTimer = null;
+        var huntWordTimeout = null;
+        var currentHuntTarget = 'deer';
+        var huntReactionTime = 0;
+
+        // Audio context for sound effects
+        var audioCtx = null;
+
+        function playGunshotSound() {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                var oscillator = audioCtx.createOscillator();
+                var gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.type = 'square';
+                oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.1);
+                
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.15);
+            } catch (e) {
+                // Audio not supported
+            }
+        }
+
+        function showHuntOverlay(huntWord) {
+            if (huntState !== 'idle') return;
+            huntState = 'waiting';
+
+            var overlay = document.getElementById('hunt-overlay');
+            overlay.classList.remove('hidden');
+
+            document.getElementById('hunt-text').textContent = 'Get ready...';
+            document.getElementById('hunt-word-display').innerHTML = '';
+            document.getElementById('hunt-result').innerHTML = '';
+            document.getElementById('hunt-fire-btn').disabled = true;
+            document.getElementById('hunt-fire-btn').classList.remove('ready');
+            
+            // Reset wildlife
+            var wildlife = ['hunt-deer', 'hunt-rabbit', 'hunt-bird', 'hunt-buffalo'];
+            wildlife.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) {
+                    el.className = 'hunt-wildlife ' + id.replace('hunt-', '');
+                    el.style.display = 'none';
+                }
+            });
+
+            // Randomly select target animal
+            var animals = [
+                { id: 'hunt-deer', chance: 0.5, name: 'Deer' },
+                { id: 'hunt-rabbit', chance: 0.25, name: 'Rabbit' },
+                { id: 'hunt-bird', chance: 0.15, name: 'Eagle' },
+                { id: 'hunt-buffalo', chance: 0.1, name: 'Buffalo' }
+            ];
+            var rand = Math.random();
+            var cumulative = 0;
+            for (var i = 0; i < animals.length; i++) {
+                cumulative += animals[i].chance;
+                if (rand < cumulative) {
+                    currentHuntTarget = animals[i].id;
+                    break;
+                }
+            }
+            
+            // Show selected animal
+            var targetEl = document.getElementById(currentHuntTarget);
+            if (targetEl) {
+                targetEl.style.display = 'block';
+                // Random position
+                var pos = 20 + Math.random() * 60;
+                targetEl.style.left = pos + '%';
+            }
+
+            // Show instruction based on target
+            var instructions = document.querySelector('.hunt-instructions');
+            if (instructions) {
+                instructions.innerHTML = 'Press <kbd>FIRE!</kbd> or <kbd>SPACE</kbd> when the word appears - no aiming needed!';
+            }
+
+            // Random delay 1-3 seconds, then show word
+            var delay = 1000 + Math.random() * 2000;
+            huntWordTimeout = setTimeout(function() {
+                if (huntState !== 'waiting') return;
+                huntState = 'ready';
+                document.getElementById('hunt-text').textContent = '';
+                document.getElementById('hunt-word-display').innerHTML = '<div class="hunt-word">' + escapeHtml(huntWord) + '</div>';
+                document.getElementById('hunt-fire-btn').disabled = false;
+                document.getElementById('hunt-fire-btn').classList.add('ready');
+                huntStartTime = Date.now();
+            }, delay);
+        }
+
+        function huntFire() {
+            if (huntState === 'waiting') {
+                // Fired too early!
+                huntState = 'done';
+                clearTimeout(huntWordTimeout);
+                document.getElementById('hunt-fire-btn').disabled = true;
+                document.getElementById('hunt-fire-btn').classList.remove('ready');
+                document.getElementById('hunt-text').textContent = 'Too early!';
+                document.getElementById('hunt-word-display').innerHTML = '';
+                
+                var targetEl = document.getElementById(currentHuntTarget);
+                if (targetEl) {
+                    targetEl.classList.add('miss');
+                }
+                
+                // Send a very high time as penalty
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'hunt_shoot', time: 9999 }));
+                }
+                setTimeout(hideHuntOverlay, 2000);
+                return;
+            }
+
+            if (huntState !== 'ready') return;
+            huntState = 'fired';
+
+            huntReactionTime = Date.now() - huntStartTime;
+            document.getElementById('hunt-fire-btn').disabled = true;
+            document.getElementById('hunt-fire-btn').classList.remove('ready');
+
+            // Play gunshot sound
+            playGunshotSound();
+
+            // Show muzzle flash
+            var muzzleFlash = document.getElementById('hunt-muzzle-flash');
+            if (muzzleFlash) {
+                muzzleFlash.style.animation = 'none';
+                muzzleFlash.offsetHeight; // Trigger reflow
+                muzzleFlash.style.animation = 'muzzleFlash 0.1s ease-out';
+            }
+
+            // Crosshair recoil effect
+            var crosshair = document.getElementById('hunt-crosshair');
+            if (crosshair) {
+                crosshair.classList.add('firing');
+                setTimeout(function() {
+                    crosshair.classList.remove('firing');
+                }, 150);
+            }
+
+            // Send to server
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'hunt_shoot', time: huntReactionTime }));
+            }
+
+            // Show local feedback
+            var targetEl = document.getElementById(currentHuntTarget);
+            var resultEl = document.getElementById('hunt-result');
+
+            var animalType = currentHuntTarget.replace('hunt-', '');
+            var isBigGame = animalType === 'deer' || animalType === 'buffalo';
+            
+            if (huntReactionTime < 300) {
+                deer.classList.add('hit');
+                resultEl.innerHTML = '<div class="hunt-result perfect">PERFECT SHOT! (' + huntReactionTime + 'ms)<span class="food-gained">+20 bonus food!</span></div>';
+            } else if (huntReactionTime < 600) {
+                deer.classList.add('hit');
+                resultEl.innerHTML = '<div class="hunt-result good">Nice shot! (' + huntReactionTime + 'ms)<span class="food-gained">+10 bonus food!</span></div>';
+            } else if (huntReactionTime < 1000) {
+                deer.classList.add('hit');
+                resultEl.innerHTML = '<div class="hunt-result good">Good hit! (' + huntReactionTime + 'ms)</div>';
+            } else {
+                deer.classList.add('miss');
+                resultEl.innerHTML = '<div class="hunt-result miss">Missed! (' + huntReactionTime + 'ms)</div>';
+            }
+
+            huntState = 'done';
+            setTimeout(hideHuntOverlay, 3000);
+        }
+
+        function hideHuntOverlay() {
+            document.getElementById('hunt-overlay').classList.add('hidden');
+            huntState = 'idle';
+            clearTimeout(huntWordTimeout);
+            huntWordTimeout = null;
+        }
+
+        // Track mouse for custom crosshair
+        document.addEventListener('mousemove', function(e) {
+            var crosshair = document.getElementById('hunt-crosshair');
+            if (crosshair && huntState !== 'idle') {
+                crosshair.style.left = e.clientX + 'px';
+                crosshair.style.top = e.clientY + 'px';
+            }
+        });
+
+        // Allow spacebar or click anywhere to fire during hunt
+        document.addEventListener('keydown', function(e) {
+            if ((huntState === 'ready' || huntState === 'waiting') && (e.code === 'Space' || e.code === 'Enter')) {
+                e.preventDefault();
+                huntFire();
+            }
+        });
+
+        /* ======== RIDER COMBAT ======== */
+        var riderActive = false;
+
+        function showRiderOverlay(state) {
+            if (riderActive) return;
+            riderActive = true;
+
+            var overlay = document.getElementById('rider-overlay');
+            overlay.classList.remove('hidden');
+
+            var header = document.getElementById('rider-header');
+            var count = document.getElementById('rider-count');
+            var body = document.getElementById('rider-body');
+
+            var hostile = state.rider_hostile;
+            var riderCount = state.rider_count || 5;
+
+            if (hostile) {
+                header.textContent = 'RIDERS AHEAD!';
+                header.className = 'rider-header hostile';
+            } else {
+                header.textContent = 'RIDERS AHEAD';
+                header.className = 'rider-header friendly';
+            }
+            count.textContent = riderCount + ' riders ' + (hostile ? '- They look HOSTILE!' : '- They don\'t look hostile.');
+
+            if (isMyTurn) {
+                // Show tactic buttons
+                var btns = document.querySelectorAll('.tactic-btn');
+                btns.forEach(function(btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                });
+                document.getElementById('tactic-grid').style.display = 'grid';
+            } else {
+                // Show waiting message
+                var currentName = 'Someone';
+                if (state.players) {
+                    state.players.forEach(function(p) {
+                        if (p.id === state.current_player_id) currentName = p.name;
+                    });
+                }
+                body.innerHTML = '<div class="rider-waiting">Waiting for ' + escapeHtml(currentName) + ' to choose a tactic...</div>'
+                    + '<div class="tactic-grid" id="tactic-grid" style="display:none"></div>';
+            }
+        }
+
+        function riderTactic(tactic) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'rider_tactic', tactic: tactic }));
+
+            // Disable buttons
+            var btns = document.querySelectorAll('.tactic-btn');
+            btns.forEach(function(btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.4';
+            });
+        }
+
+        function hideRiderOverlay() {
+            document.getElementById('rider-overlay').classList.add('hidden');
+            riderActive = false;
+            // Restore tactic grid HTML for next time
+            var body = document.getElementById('rider-body');
+            body.innerHTML = '<div class="tactic-grid" id="tactic-grid">'
+                + '<div class="tactic-btn" onclick="riderTactic(1)"><span class="tactic-icon">&#x1F462;</span><div class="tactic-name">Run</div><div class="tactic-desc">Flee and lose supplies</div></div>'
+                + '<div class="tactic-btn" onclick="riderTactic(2)"><span class="tactic-icon">&#x2694;&#xFE0F;</span><div class="tactic-name">Attack</div><div class="tactic-desc">Fight back with your guns</div></div>'
+                + '<div class="tactic-btn" onclick="riderTactic(3)"><span class="tactic-icon">&#x1F6B6;</span><div class="tactic-name">Continue</div><div class="tactic-desc">Keep going, hope for the best</div></div>'
+                + '<div class="tactic-btn" onclick="riderTactic(4)"><span class="tactic-icon">&#x1F6E1;&#xFE0F;</span><div class="tactic-name">Circle Wagons</div><div class="tactic-desc">Defensive position</div></div>'
+                + '</div>';
+        }
+
+        function showGameOver(state) {
+            gameIsOver = true;
+            stopTurnTimer();
+            document.getElementById('game-screen').classList.add('hidden');
+            var el = document.getElementById('game-over');
+            el.classList.remove('hidden');
+
+            if (state.win) {
+                el.className = 'game-over win';
+                document.getElementById('game-over-title').textContent = 'CONGRATULATIONS!';
+                document.getElementById('game-over-message').innerHTML =
+                    'You made it to Online City!<br><br>'
+                    + 'Arrival Date: ' + state.final_date + '<br>'
+                    + 'Miles Traveled: 4,500<br><br>'
+                    + 'President James K. Polk sends his regards!';
+            } else {
+                el.className = 'game-over lose';
+                document.getElementById('game-over-title').textContent = 'GAME OVER';
+                document.getElementById('game-over-message').innerHTML =
+                    'Your party did not survive the journey.<br><br>'
+                    + 'You reached ' + Math.floor(state.mileage) + ' miles.<br><br>'
+                    + 'Better luck next time, pioneer.';
+            }
+
+            loadLeaderboard('gameover-leaderboard');
+        }
+    </script>
+</body>
+</html>

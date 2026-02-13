@@ -1,0 +1,11 @@
+{
+    admin off
+    email {$ORS_TRAIL_EMAIL}
+    storage file_system /data
+}
+
+{$ORS_TRAIL_DOMAIN} {
+    reverse_proxy localhost:8080 {
+        header_up Host {host}
+    }
+}

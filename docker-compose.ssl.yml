@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # Online Trail Game Server
+  game:
+    build: .
+    container_name: online-trail-game
+    restart: unless-stopped
+    expose:
+      - "8080"
+    environment:
+      - HTTP_PORT=8080
+    volumes:
+      - game_data:/app
+
+  # Caddy Reverse Proxy with SSL
+  caddy:
+    image: caddy:2.8.4-alpine
+    container_name: online-trail-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - game
+    environment:
+      - ORS_TRAIL_DOMAIN=${ORS_TRAIL_DOMAIN:-localhost}
+      - ORS_TRAIL_EMAIL=${ORS_TRAIL_EMAIL:-noreply@example.com}
+
+volumes:
+  game_data:
+  caddy_data:

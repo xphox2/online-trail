@@ -1,0 +1,7 @@
+*.md
+.git
+.gitignore
+*.exe
+*.dll
+*.so
+*.dylib

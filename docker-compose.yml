@@ -1,0 +1,29 @@
+version: '3.8'
+
+# Online Trail - Single Container
+
+services:
+  online-trail:
+    build: .
+    container_name: online-trail
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    environment:
+      - ORS_TRAIL_DOMAIN=${ORS_TRAIL_DOMAIN:-localhost}
+      - ORS_TRAIL_EMAIL=${ORS_TRAIL_EMAIL:-noreply@example.com}
+      - DATA_PATH=/app/data
+    volumes:
+      - ssl_data:/data
+      - game_data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  ssl_data:
+  game_data:
