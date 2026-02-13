@@ -278,12 +278,15 @@ func (s *Server) RemoveClient(clientID string, roomID string) {
 		log.Printf("Player %s disconnected from %s", c.Name, roomID)
 
 		// Auto-reset continuous room when last player leaves after a loss
+		// Preserve loot wagons so they carry over to the next game
 		if room.roomType == RoomTypeContinuous && len(room.clients) == 0 && room.game.GameOver && !room.game.Win {
+			savedLoot := room.game.LootSites
 			s.CancelTurnTimer(room)
 			room.game.ResetGame()
+			room.game.LootSites = savedLoot
 			room.status = StatusWaiting
 			room.deadPlayers = make(map[string]bool)
-			log.Printf("Continuous room %s auto-reset after all players disconnected (loss)", roomID)
+			log.Printf("Continuous room %s auto-reset after all players disconnected (loss), preserved %d loot sites", roomID, len(savedLoot))
 		}
 	}
 }
@@ -343,12 +346,15 @@ func (s *Server) LogoutClient(clientID, sessionID string, roomID string) {
 		log.Printf("Player %s logged out of %s", c.Name, roomID)
 
 		// Auto-reset continuous room when last player leaves after a loss
+		// Preserve loot wagons so they carry over to the next game
 		if room.roomType == RoomTypeContinuous && len(room.clients) == 0 && room.game.GameOver && !room.game.Win {
+			savedLoot := room.game.LootSites
 			s.CancelTurnTimer(room)
 			room.game.ResetGame()
+			room.game.LootSites = savedLoot
 			room.status = StatusWaiting
 			room.deadPlayers = make(map[string]bool)
-			log.Printf("Continuous room %s auto-reset after all players left (loss)", roomID)
+			log.Printf("Continuous room %s auto-reset after all players left (loss), preserved %d loot sites", roomID, len(savedLoot))
 		}
 	}
 
