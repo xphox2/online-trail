@@ -276,6 +276,15 @@ func (s *Server) RemoveClient(clientID string, roomID string) {
 			}
 		}
 		log.Printf("Player %s disconnected from %s", c.Name, roomID)
+
+		// Auto-reset continuous room when last player leaves after a loss
+		if room.roomType == RoomTypeContinuous && len(room.clients) == 0 && room.game.GameOver && !room.game.Win {
+			s.CancelTurnTimer(room)
+			room.game.ResetGame()
+			room.status = StatusWaiting
+			room.deadPlayers = make(map[string]bool)
+			log.Printf("Continuous room %s auto-reset after all players disconnected (loss)", roomID)
+		}
 	}
 }
 
@@ -332,6 +341,15 @@ func (s *Server) LogoutClient(clientID, sessionID string, roomID string) {
 			}
 		}
 		log.Printf("Player %s logged out of %s", c.Name, roomID)
+
+		// Auto-reset continuous room when last player leaves after a loss
+		if room.roomType == RoomTypeContinuous && len(room.clients) == 0 && room.game.GameOver && !room.game.Win {
+			s.CancelTurnTimer(room)
+			room.game.ResetGame()
+			room.status = StatusWaiting
+			room.deadPlayers = make(map[string]bool)
+			log.Printf("Continuous room %s auto-reset after all players left (loss)", roomID)
+		}
 	}
 
 	s.sessionManager.InvalidateSession(sessionID)
