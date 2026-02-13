@@ -2945,13 +2945,8 @@
                 spectatorBanner.classList.remove('hidden');
                 var subtitle = document.getElementById('spectator-subtitle');
                 var rejoinBtn = document.getElementById('spectator-rejoin');
-                if (state.room_type === 'continuous') {
-                    subtitle.textContent = 'Your party perished at mile ' + Math.floor(state.mileage) + '. You can play again or keep spectating.';
-                    rejoinBtn.classList.remove('hidden');
-                } else {
-                    subtitle.textContent = 'Your party perished at mile ' + Math.floor(state.mileage) + '. You can still watch and chat.';
-                    rejoinBtn.classList.add('hidden');
-                }
+                subtitle.textContent = 'Your party perished at mile ' + Math.floor(state.mileage) + '. You can play again or keep spectating.';
+                rejoinBtn.classList.remove('hidden');
                 // Show death notification card once
                 if (wasAlive) {
                     addCard('death', 'You Have Fallen', 'skull', [

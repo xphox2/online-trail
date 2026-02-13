@@ -295,18 +295,12 @@ func (s *Server) LogoutClient(clientID, sessionID string, roomID string) {
 		for i, p := range room.game.Players {
 			if p.ID == clientID {
 				// If the player is dead and the game is in progress, reduce maxPlayers
-				// In continuous mode, allow dead players to rejoin as fresh players
-				// In other modes, ban them from rejoining until the game resets
+				// Allow dead players to rejoin as fresh players in all modes
 				if !p.Alive && room.status == StatusPlaying {
 					if room.maxPlayers > 0 {
 						room.maxPlayers--
 					}
-					if room.roomType != RoomTypeContinuous {
-						room.deadPlayers[c.Name] = true
-						log.Printf("Dead player %s logged out, banned from rejoining room %s until reset", c.Name, roomID)
-					} else {
-						log.Printf("Dead player %s logged out of continuous room %s, can rejoin as fresh player", c.Name, roomID)
-					}
+					log.Printf("Dead player %s logged out of room %s, can rejoin as fresh player", c.Name, roomID)
 				}
 				room.game.Players = append(room.game.Players[:i], room.game.Players[i+1:]...)
 				if room.game.CurrentPlayerIdx >= len(room.game.Players) && len(room.game.Players) > 0 {
