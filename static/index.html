@@ -2152,6 +2152,7 @@
             ws = new WebSocket(url);
 
             ws.onopen = function() {
+                console.log('WebSocket connected');
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('resuming-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
@@ -2164,6 +2165,7 @@
             };
 
             ws.onmessage = function(event) {
+                console.log('WS message:', event.data);
                 var msg = JSON.parse(event.data);
 
                 if (msg.type === 'your_id') {
