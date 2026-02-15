@@ -1169,6 +1169,7 @@ func (s *Server) HandleAction(clientID string, roomID string, action string) str
 
 	// For continuous mode, each player has their own game
 	if room.roomType == RoomTypeContinuous {
+		log.Printf("DEBUG HandleAction: routing to handleContinuousAction, clientID=%s, action=%s", clientID, action)
 		return s.handleContinuousAction(room, clientID, action)
 	}
 
@@ -1274,8 +1275,11 @@ func (s *Server) getPlayerGame(room *GameRoom, clientID string) (*game.GameState
 // handleContinuousAction handles player actions in continuous mode.
 // Each player has their own independent game state.
 func (s *Server) handleContinuousAction(room *GameRoom, clientID string, action string) string {
+	log.Printf("DEBUG handleContinuousAction: clientID=%s, action=%s, playerGames count=%d", clientID, action, len(room.playerGames))
+
 	playerGame, ok := room.playerGames[clientID]
 	if !ok || playerGame == nil {
+		log.Printf("DEBUG: playerGame not found for clientID=%s", clientID)
 		return "Error: Your game state not found. Please rejoin.\n"
 	}
 
@@ -1288,8 +1292,11 @@ func (s *Server) handleContinuousAction(room *GameRoom, clientID string, action 
 		}
 	}
 	if player == nil {
+		log.Printf("DEBUG: player not found in playerGame for clientID=%s", clientID)
 		return "Error: Player not found in game state.\n"
 	}
+
+	log.Printf("DEBUG: processing action=%s for player=%s, TurnPhase=%s", action, player.Name, playerGame.TurnPhase)
 
 	// Handle start action - reset player's game
 	if action == "start" {

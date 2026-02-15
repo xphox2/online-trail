@@ -385,7 +385,9 @@ func (c *wsClient) readPump() {
 			if !ok {
 				break
 			}
+			log.Printf("DEBUG WS: received action=%s from clientID=%s", action, c.clientID)
 			result := c.hub.server.HandleAction(c.clientID, roomID, action)
+			log.Printf("DEBUG WS: action result: %q", result)
 
 			c.hub.BroadcastEventTo(roomID, c.playerName, action, result)
 			c.hub.BroadcastStateTo(roomID)
