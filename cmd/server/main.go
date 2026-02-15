@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -38,7 +39,8 @@ type GameRoom struct {
 	ownerID      string
 	maxPlayers   int
 	createdAt    time.Time
-	game         *game.GameState
+	game         *game.GameState            // used for scheduled/private mode (shared game)
+	playerGames  map[string]*game.GameState // continuous mode: each player has their own game state
 	clients      map[string]*Client
 	deadPlayers  map[string]bool // names banned from rejoining until reset
 	turnTimer    *time.Timer
@@ -64,6 +66,7 @@ type Server struct {
 	sessionManager *SessionManager
 	leaderboard    *Leaderboard
 	hub            *Hub
+	dataPath       string
 }
 
 type Client struct {
@@ -92,6 +95,7 @@ func NewGameRoom(id, name string, roomType RoomType) *GameRoom {
 		status:      StatusWaiting,
 		createdAt:   time.Now(),
 		game:        game.NewGameState(),
+		playerGames: make(map[string]*game.GameState),
 		clients:     make(map[string]*Client),
 		deadPlayers: make(map[string]bool),
 	}
@@ -102,10 +106,13 @@ func NewServer(dataPath string) *Server {
 		rooms:          make(map[string]*GameRoom),
 		sessionManager: NewSessionManager(),
 		leaderboard:    NewLeaderboard(dataPath),
+		dataPath:       dataPath,
 	}
 	// Create the permanent continuous room
 	continuous := NewGameRoom("continuous", "The Open Trail", RoomTypeContinuous)
 	s.rooms["continuous"] = continuous
+	// Load persisted game state if exists
+	s.loadGameState()
 	return s
 }
 
@@ -119,6 +126,195 @@ func initRoomResources(room *GameRoom) {
 	room.game.GameOver = false
 	room.game.Win = false
 	room.game.CurrentPlayerIdx = 0
+}
+
+type PersistedGameState struct {
+	PlayerName       string          `json:"player_name"`
+	TurnNumber       int             `json:"turn_number"`
+	Mileage          float64         `json:"mileage"`
+	DistanceTraveled int             `json:"distance_traveled"`
+	Week             int             `json:"week"`
+	Day              int             `json:"day"`
+	Food             float64         `json:"food"`
+	Bullets          float64         `json:"bullets"`
+	Clothing         float64         `json:"clothing"`
+	MiscSupplies     float64         `json:"misc_supplies"`
+	Cash             float64         `json:"cash"`
+	OxenCost         float64         `json:"oxen_cost"`
+	TurnPhase        game.TurnPhase  `json:"turn_phase"`
+	GameOver         bool            `json:"game_over"`
+	Win              bool            `json:"win"`
+	CurrentPlayerIdx int             `json:"current_player_idx"`
+	LootSites        []game.LootSite `json:"loot_sites"`
+	FortAvailable    bool            `json:"fort_available"`
+}
+
+// PersistedContinuousState saves the state for continuous mode (per-player games)
+type PersistedContinuousState struct {
+	LootSites      []game.LootSite               `json:"loot_sites"`
+	PlayerGames    map[string]PersistedGameState `json:"player_games"`
+	GameWon        bool                          `json:"game_won"`
+	WinnerPlayerID string                        `json:"winner_player_id"`
+}
+
+func (s *Server) getGameStateFilePath() string {
+	if s.dataPath == "" {
+		s.dataPath = "."
+	}
+	return filepath.Join(s.dataPath, "game_state.json")
+}
+
+func (s *Server) loadGameState() {
+	room := s.GetRoom("continuous")
+	if room == nil {
+		return
+	}
+
+	filePath := s.getGameStateFilePath()
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Printf("No saved game state found at %s (this is normal on first run)", filePath)
+		return
+	}
+
+	var persisted PersistedContinuousState
+	if err := json.Unmarshal(data, &persisted); err != nil {
+		log.Printf("Failed to parse saved game state: %v", err)
+		return
+	}
+
+	room.mu.Lock()
+	defer room.mu.Unlock()
+
+	// Load loot sites
+	room.game.LootSites = persisted.LootSites
+
+	// Load each player's game state
+	for playerID, playerData := range persisted.PlayerGames {
+		playerGame := game.NewGameState()
+		playerGame.TurnNumber = playerData.TurnNumber
+		playerGame.Mileage = playerData.Mileage
+		playerGame.DistanceTraveled = playerData.DistanceTraveled
+		playerGame.Week = playerData.Week
+		playerGame.Day = playerData.Day
+		playerGame.Food = playerData.Food
+		playerGame.Bullets = playerData.Bullets
+		playerGame.Clothing = playerData.Clothing
+		playerGame.MiscSupplies = playerData.MiscSupplies
+		playerGame.Cash = playerData.Cash
+		playerGame.OxenCost = playerData.OxenCost
+		playerGame.TurnPhase = playerData.TurnPhase
+		playerGame.GameOver = playerData.GameOver
+		playerGame.Win = playerData.Win
+		playerGame.CurrentPlayerIdx = playerData.CurrentPlayerIdx
+		playerGame.FortAvailable = playerData.FortAvailable
+
+		// Add player to the game
+		player := playerGame.AddPlayer(playerData.PlayerName, game.PlayerTypeHuman)
+		player.ID = playerID
+		player.Alive = !playerData.GameOver
+
+		room.playerGames[playerID] = playerGame
+
+		log.Printf("Loaded game for player %s: Turn %d, Mileage %.0f, Week %d",
+			playerID, playerData.TurnNumber, playerData.Mileage, playerData.Week)
+	}
+
+	if persisted.GameWon {
+		room.status = StatusFinished
+	} else if len(room.playerGames) > 0 {
+		room.status = StatusPlaying
+	}
+
+	log.Printf("Game state loaded: %d players, %d loot sites, Status %s",
+		len(room.playerGames), len(room.game.LootSites), room.status)
+}
+
+func (s *Server) saveGameState() {
+	room := s.GetRoom("continuous")
+	if room == nil {
+		return
+	}
+
+	room.mu.RLock()
+	defer room.mu.RUnlock()
+
+	// Check if someone won
+	gameWon := false
+	winnerID := ""
+	for playerID, playerGame := range room.playerGames {
+		if playerGame.Win {
+			gameWon = true
+			winnerID = playerID
+			break
+		}
+	}
+
+	if gameWon {
+		filePath := s.getGameStateFilePath()
+		if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+			log.Printf("Failed to delete saved game state: %v", err)
+		} else {
+			log.Printf("Game won by %s - saved game state deleted", winnerID)
+		}
+		return
+	}
+
+	// Save each player's game state
+	playerGames := make(map[string]PersistedGameState)
+	for playerID, playerGame := range room.playerGames {
+		playerName := playerID
+		for _, c := range room.clients {
+			if c.ID == playerID {
+				playerName = c.Name
+				break
+			}
+		}
+
+		playerGames[playerID] = PersistedGameState{
+			PlayerName:       playerName,
+			TurnNumber:       playerGame.TurnNumber,
+			Mileage:          playerGame.Mileage,
+			DistanceTraveled: playerGame.DistanceTraveled,
+			Week:             playerGame.Week,
+			Day:              playerGame.Day,
+			Food:             playerGame.Food,
+			Bullets:          playerGame.Bullets,
+			Clothing:         playerGame.Clothing,
+			MiscSupplies:     playerGame.MiscSupplies,
+			Cash:             playerGame.Cash,
+			OxenCost:         playerGame.OxenCost,
+			TurnPhase:        playerGame.TurnPhase,
+			GameOver:         playerGame.GameOver,
+			Win:              playerGame.Win,
+			CurrentPlayerIdx: playerGame.CurrentPlayerIdx,
+			FortAvailable:    playerGame.FortAvailable,
+		}
+	}
+
+	persisted := PersistedContinuousState{
+		LootSites:   room.game.LootSites,
+		PlayerGames: playerGames,
+		GameWon:     gameWon,
+	}
+
+	data, err := json.MarshalIndent(persisted, "", "  ")
+	if err != nil {
+		log.Printf("Failed to marshal game state: %v", err)
+		return
+	}
+
+	filePath := s.getGameStateFilePath()
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		log.Printf("Failed to create data directory: %v", err)
+		return
+	}
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		log.Printf("Failed to save game state: %v", err)
+	} else {
+		log.Printf("Game state saved: %d players, %d loot sites", len(playerGames), len(room.game.LootSites))
+	}
 }
 
 func (s *Server) GetRoom(roomID string) *GameRoom {
@@ -226,47 +422,76 @@ func (s *Server) AddClient(c *Client, roomID string) {
 		return
 	}
 
-	// Check if player already exists in game (for reconnections by ID or name)
-	var existingPlayer *game.Player
-	for _, p := range room.game.Players {
-		if p.ID == c.ID || p.Name == c.Name {
-			existingPlayer = p
-			break
-		}
-	}
+	if room.roomType == RoomTypeContinuous {
+		// Continuous mode: each player has their own independent game
+		if existingGame, ok := room.playerGames[c.ID]; ok {
+			// Reconnecting player - find their player in the game
+			c.Player = nil
+			for _, p := range existingGame.Players {
+				if p.ID == c.ID {
+					c.Player = p
+					break
+				}
+			}
+			if c.Player == nil {
+				// Player was fully removed, create new
+				player := existingGame.AddPlayer(c.Name, game.PlayerTypeHuman)
+				player.ID = c.ID
+				c.Player = player
+			}
+			log.Printf("Player %s reconnected to continuous %s (ID: %s)", c.Name, roomID, c.ID)
+		} else {
+			// New player in continuous mode - create their own game state
+			newGame := game.NewGameState()
+			newGame.OxenCost = 220
+			newGame.Food = 100
+			newGame.Bullets = 50
+			newGame.Clothing = 20
+			newGame.MiscSupplies = 10
+			newGame.Cash = 700
+			newGame.GameOver = false
+			newGame.Win = false
+			newGame.CurrentPlayerIdx = 0
+			newGame.TurnNumber = 1
 
-	if existingPlayer != nil {
-		existingPlayer.ID = c.ID
-		c.Player = existingPlayer
-		log.Printf("Player %s reconnected to %s (ID: %s)", c.Name, roomID, c.ID)
+			player := newGame.AddPlayer(c.Name, game.PlayerTypeHuman)
+			player.ID = c.ID
+			c.Player = player
+
+			room.playerGames[c.ID] = newGame
+			room.status = StatusPlaying
+			log.Printf("Continuous room %s: player %s started fresh at Turn 1, Mileage 0",
+				roomID, c.Name)
+		}
 	} else {
-		player := room.game.AddPlayer(c.Name, game.PlayerTypeHuman)
-		player.ID = c.ID
-		c.Player = player
-
-		// If this is the first player in continuous mode, auto-start
-		if room.roomType == RoomTypeContinuous && room.game.TurnNumber == 0 && len(room.clients) == 1 {
-			initRoomResources(room)
-			room.status = StatusPlaying
+		// Scheduled/private mode: players share the room's game
+		var existingPlayer *game.Player
+		for _, p := range room.game.Players {
+			if p.ID == c.ID || p.Name == c.Name {
+				existingPlayer = p
+				break
+			}
 		}
 
-		// In continuous mode, new players joining mid-game start a fresh journey
-		// Reset progression but preserve loot sites on the trail
-		if room.roomType == RoomTypeContinuous && room.game.TurnNumber > 0 {
-			room.game.Mileage = 0
-			room.game.DistanceTraveled = 0
-			room.game.Week = 1
-			room.game.Day = 1
-			initRoomResources(room)
-			room.status = StatusPlaying
-			room.game.TurnPhase = game.PhaseMainMenu
-			log.Printf("Continuous room %s: fresh journey started for new player %s", roomID, c.Name)
+		if existingPlayer != nil {
+			existingPlayer.ID = c.ID
+			c.Player = existingPlayer
+			log.Printf("Player %s reconnected to %s (ID: %s)", c.Name, roomID, c.ID)
+		} else {
+			player := room.game.AddPlayer(c.Name, game.PlayerTypeHuman)
+			player.ID = c.ID
+			c.Player = player
+
+			// If this is the first player in scheduled mode and waiting, auto-start
+			if room.status == StatusWaiting && len(room.clients) >= 1 {
+				initRoomResources(room)
+				room.status = StatusPlaying
+			}
 		}
 
-	}
-
-	if room.game.GetCurrentPlayer() == nil && len(room.game.Players) > 0 {
-		room.game.CurrentPlayerIdx = 0
+		if room.game.GetCurrentPlayer() == nil && len(room.game.Players) > 0 {
+			room.game.CurrentPlayerIdx = 0
+		}
 	}
 
 	log.Printf("Player %s joined %s (ID: %s)", c.Name, roomID, c.ID)
@@ -518,6 +743,40 @@ func (s *Server) createLootSite(room *GameRoom, c *Client) {
 	log.Printf("Loot site created at mile %.0f for dead player %s in room %s", room.game.Mileage, c.Name, room.id)
 }
 
+// createLootSiteFromPlayer creates a loot site from a player's individual game state (continuous mode)
+func (s *Server) createLootSiteFromPlayer(room *GameRoom, player *game.Player, playerGame *game.GameState) {
+	if player == nil || playerGame == nil {
+		return
+	}
+
+	// Find the client name
+	clientName := player.Name
+	for _, c := range room.clients {
+		if c.ID == player.ID {
+			clientName = c.Name
+			break
+		}
+	}
+
+	lootSite := game.LootSite{
+		ID:           fmt.Sprintf("loot-%s-%d", player.ID, time.Now().Unix()),
+		Mileage:      playerGame.Mileage,
+		PlayerName:   clientName,
+		Food:         playerGame.Food,
+		Bullets:      playerGame.Bullets,
+		Clothing:     playerGame.Clothing,
+		MiscSupplies: playerGame.MiscSupplies,
+		Cash:         playerGame.Cash,
+		OxenCost:     playerGame.OxenCost,
+		DateCreated:  time.Now(),
+		IsLooted:     false,
+	}
+
+	room.game.LootSites = append(room.game.LootSites, lootSite)
+	log.Printf("Loot site created at mile %.0f for dead player %s in continuous room",
+		playerGame.Mileage, clientName)
+}
+
 // deteriorateLootSites applies decay to unlooted sites every 24 hours
 func (s *Server) deteriorateLootSites() {
 	s.roomsMu.RLock()
@@ -581,6 +840,14 @@ func (s *Server) advanceTurnAndCheckFort(room *GameRoom) bool {
 	}
 	s.StartTurnTimer(room, np.ID)
 	return fortTriggered
+}
+
+// saveGameStateAfterTurn saves the game state after a turn is completed.
+// Should be called outside the room lock to avoid deadlock.
+func (s *Server) saveGameStateAfterTurn(roomID string) {
+	if roomID == "continuous" {
+		go s.saveGameState()
+	}
 }
 
 // StartTurnTimer starts a turn timer for the given player.
@@ -666,6 +933,9 @@ func (s *Server) handleTurnTimeout(room *GameRoom, expectedPlayerID string) {
 		s.hub.BroadcastEventTo(roomID, playerName, "continue", result)
 		s.hub.BroadcastStateTo(roomID)
 	}
+
+	// Save game state for persistence
+	s.saveGameStateAfterTurn(roomID)
 }
 
 func (s *Server) GetState(roomID string) interface{} {
@@ -676,6 +946,12 @@ func (s *Server) GetState(roomID string) interface{} {
 	room.mu.RLock()
 	defer room.mu.RUnlock()
 
+	// For continuous mode, build per-player states
+	if room.roomType == RoomTypeContinuous {
+		return s.getContinuousState(room)
+	}
+
+	// Scheduled/private mode: shared game state
 	currentPlayer := room.game.GetCurrentPlayer()
 	currentPlayerID := ""
 	if currentPlayer != nil {
@@ -749,6 +1025,118 @@ func (s *Server) GetState(roomID string) interface{} {
 	return state
 }
 
+// getContinuousState returns the state for continuous mode where each player has their own game
+func (s *Server) getContinuousState(room *GameRoom) map[string]interface{} {
+	state := map[string]interface{}{
+		"turn_number":   0, // Not used in continuous mode
+		"mileage":       0, // Not used - each player has own mileage
+		"food":          0,
+		"bullets":       0,
+		"clothing":      0,
+		"misc_supplies": 0,
+		"cash":          0,
+		"game_over":     false,
+		"win":           false,
+		"turn_phase":    game.PhaseMainMenu,
+		"room_id":       room.id,
+		"room_name":     room.name,
+		"room_type":     room.roomType,
+		"game_status":   room.status,
+		"loot_sites":    room.game.LootSites,
+	}
+
+	// Build player states - each player has their own independent game
+	playerStates := make(map[string]map[string]interface{})
+	playersInfo := make([]map[string]interface{}, 0)
+
+	for _, c := range room.clients {
+		playerGame, hasGame := room.playerGames[c.ID]
+		playerAlive := true
+
+		if hasGame && playerGame != nil && len(playerGame.Players) > 0 {
+			// Find the player's player struct
+			var player *game.Player
+			for _, p := range playerGame.Players {
+				if p.ID == c.ID {
+					player = p
+					break
+				}
+			}
+			if player != nil {
+				playerAlive = player.Alive
+			}
+
+			playerStates[c.ID] = map[string]interface{}{
+				"turn_number":       playerGame.TurnNumber,
+				"mileage":           playerGame.Mileage,
+				"distance_traveled": playerGame.DistanceTraveled,
+				"week":              playerGame.Week,
+				"day":               playerGame.Day,
+				"food":              playerGame.Food,
+				"bullets":           playerGame.Bullets,
+				"clothing":          playerGame.Clothing,
+				"misc_supplies":     playerGame.MiscSupplies,
+				"cash":              playerGame.Cash,
+				"oxen_cost":         playerGame.OxenCost,
+				"game_over":         playerGame.GameOver,
+				"win":               playerGame.Win,
+				"turn_phase":        playerGame.TurnPhase,
+				"fort_available":    playerGame.FortAvailable,
+				"hunt_word":         playerGame.HuntWord,
+				"rider_hostile":     playerGame.PendingRiderHostile,
+				"rider_count":       playerGame.PendingRiderCount,
+				"alive":             playerAlive,
+				"player_alive":      playerAlive,
+			}
+
+			// Add party health
+			if player != nil {
+				playerStates[c.ID]["party_health"] = playerGame.GetPartyHealth(player)
+			}
+		} else {
+			// Player has no game yet (just joined)
+			playerStates[c.ID] = map[string]interface{}{
+				"turn_number":       0,
+				"mileage":           0,
+				"distance_traveled": 0,
+				"week":              1,
+				"day":               1,
+				"food":              0,
+				"bullets":           0,
+				"clothing":          0,
+				"misc_supplies":     0,
+				"cash":              0,
+				"game_over":         false,
+				"win":               false,
+				"turn_phase":        game.PhaseMainMenu,
+				"alive":             true,
+				"player_alive":      true,
+			}
+		}
+
+		// Player list info
+		playersInfo = append(playersInfo, map[string]interface{}{
+			"id":           c.ID,
+			"name":         c.Name,
+			"alive":        playerAlive,
+			"player_alive": playerAlive,
+			"score":        0, // Will be filled from playerStates
+		})
+	}
+
+	// Update scores from player states
+	for i, p := range playersInfo {
+		if ps, ok := playerStates[p["id"].(string)]; ok {
+			playersInfo[i]["score"] = int(ps["mileage"].(float64))
+		}
+	}
+
+	state["player_states"] = playerStates
+	state["players"] = playersInfo
+
+	return state
+}
+
 func (s *Server) getPlayerInfo(room *GameRoom) []map[string]interface{} {
 	// NOTE: caller must already hold room.mu
 	players := make([]map[string]interface{}, 0)
@@ -776,6 +1164,12 @@ func (s *Server) HandleAction(clientID string, roomID string, action string) str
 	room.mu.Lock()
 	defer room.mu.Unlock()
 
+	// For continuous mode, each player has their own game
+	if room.roomType == RoomTypeContinuous {
+		return s.handleContinuousAction(room, clientID, action)
+	}
+
+	// Scheduled/private mode: shared game state
 	if action == "start" {
 		initRoomResources(room)
 		room.game.TurnNumber = 1
@@ -844,6 +1238,114 @@ func (s *Server) HandleAction(clientID string, roomID string, action string) str
 		s.advanceTurnAndCheckFort(room)
 	}
 
+	// Save game state for persistence (defer will unlock)
+	s.saveGameStateAfterTurn(roomID)
+
+	return result
+}
+
+// getPlayerGame returns the player's game state for the given room and client
+// Returns nil if not found or not continuous mode
+func (s *Server) getPlayerGame(room *GameRoom, clientID string) (*game.GameState, *game.Player) {
+	if room.roomType != RoomTypeContinuous {
+		return nil, nil
+	}
+
+	playerGame, ok := room.playerGames[clientID]
+	if !ok || playerGame == nil {
+		return nil, nil
+	}
+
+	// Find the player's player struct
+	var player *game.Player
+	for _, p := range playerGame.Players {
+		if p.ID == clientID {
+			player = p
+			break
+		}
+	}
+
+	return playerGame, player
+}
+
+// handleContinuousAction handles player actions in continuous mode.
+// Each player has their own independent game state.
+func (s *Server) handleContinuousAction(room *GameRoom, clientID string, action string) string {
+	playerGame, ok := room.playerGames[clientID]
+	if !ok || playerGame == nil {
+		return "Error: Your game state not found. Please rejoin.\n"
+	}
+
+	// Get the player's player from their game
+	var player *game.Player
+	for _, p := range playerGame.Players {
+		if p.ID == clientID {
+			player = p
+			break
+		}
+	}
+	if player == nil {
+		return "Error: Player not found in game state.\n"
+	}
+
+	// Handle start action - reset player's game
+	if action == "start" {
+		playerGame.OxenCost = 220
+		playerGame.Food = 100
+		playerGame.Bullets = 50
+		playerGame.Clothing = 20
+		playerGame.MiscSupplies = 10
+		playerGame.Cash = 700
+		playerGame.GameOver = false
+		playerGame.Win = false
+		playerGame.TurnNumber = 1
+		playerGame.Mileage = 0
+		playerGame.DistanceTraveled = 0
+		playerGame.Week = 1
+		playerGame.Day = 1
+		playerGame.TurnPhase = game.PhaseMainMenu
+
+		// Reset player party
+		names := []string{"You", "Wife", "Son", "Daughter", "Baby"}
+		for i := range player.Party {
+			player.Party[i].Alive = true
+			player.Party[i].Health = 100
+			player.Party[i].Injured = false
+			if i < len(names) {
+				player.Party[i].Name = names[i]
+			}
+		}
+		player.Alive = true
+
+		log.Printf("Continuous: player %s started fresh at Turn 1")
+		s.saveGameState()
+		return "Your journey begins! Head west on the Online Trail!"
+	}
+
+	// Dead players cannot take actions
+	if !player.Alive {
+		return "Your party has perished. You are spectating.\n"
+	}
+
+	// Process the turn using player's own game state
+	result := playerGame.ProcessTurn(player, action)
+
+	// Check if player died during this turn
+	if !player.Alive {
+		s.createLootSiteFromPlayer(room, player, playerGame)
+		log.Printf("Continuous: player %s died at Mileage %.0f, Week %d",
+			player.Name, playerGame.Mileage, playerGame.Week)
+	}
+
+	// Check for win
+	if playerGame.Win {
+		log.Printf("Continuous: player %s WON at Mileage %.0f!", player.Name, playerGame.Mileage)
+		room.status = StatusFinished
+	}
+
+	// Save state after each action
+	s.saveGameState()
+
 	return result
 }
 
@@ -854,6 +1356,17 @@ func (s *Server) HandleFortBuy(clientID string, roomID string, item string, qty 
 	}
 	room.mu.Lock()
 	defer room.mu.Unlock()
+
+	// Continuous mode: get player's own game
+	if room.roomType == RoomTypeContinuous {
+		playerGame, player := s.getPlayerGame(room, clientID)
+		if playerGame == nil || player == nil {
+			return "Error: Your game state not found. Please rejoin.\n"
+		}
+		result := playerGame.HandleFortBuy(item, qty)
+		s.saveGameState()
+		return result
+	}
 
 	c, ok := room.clients[clientID]
 	if !ok {
@@ -876,6 +1389,17 @@ func (s *Server) HandleFortSell(clientID string, roomID string, item string, qty
 	room.mu.Lock()
 	defer room.mu.Unlock()
 
+	// Continuous mode: get player's own game
+	if room.roomType == RoomTypeContinuous {
+		playerGame, player := s.getPlayerGame(room, clientID)
+		if playerGame == nil || player == nil {
+			return "Error: Your game state not found. Please rejoin.\n"
+		}
+		result := playerGame.HandleFortSell(item, qty)
+		s.saveGameState()
+		return result
+	}
+
 	c, ok := room.clients[clientID]
 	if !ok {
 		return ""
@@ -896,6 +1420,22 @@ func (s *Server) HandleFortEnter(clientID string, roomID string) string {
 	}
 	room.mu.Lock()
 	defer room.mu.Unlock()
+
+	// Continuous mode: get player's own game
+	if room.roomType == RoomTypeContinuous {
+		playerGame, player := s.getPlayerGame(room, clientID)
+		if playerGame == nil || player == nil {
+			return "Error: Your game state not found. Please rejoin.\n"
+		}
+		if !playerGame.FortAvailable {
+			return "No fort is available at this location.\n"
+		}
+		playerGame.TurnPhase = game.PhaseFort
+		playerGame.Mileage -= 45
+		playerGame.ClampResources()
+		s.saveGameState()
+		return "You arrive at a fort. You can buy supplies here.\n"
+	}
 
 	c, ok := room.clients[clientID]
 	if !ok {
@@ -927,6 +1467,18 @@ func (s *Server) HandleFortLeave(clientID string, roomID string) string {
 	room.mu.Lock()
 	defer room.mu.Unlock()
 
+	// Continuous mode: get player's own game
+	if room.roomType == RoomTypeContinuous {
+		playerGame, player := s.getPlayerGame(room, clientID)
+		if playerGame == nil || player == nil {
+			return "Error: Your game state not found. Please rejoin.\n"
+		}
+		result := playerGame.HandleFortLeave()
+		playerGame.FortAvailable = false
+		s.saveGameState()
+		return result
+	}
+
 	c, ok := room.clients[clientID]
 	if !ok {
 		return ""
@@ -940,6 +1492,10 @@ func (s *Server) HandleFortLeave(clientID string, roomID string) string {
 	result := room.game.HandleFortLeave()
 	room.game.FortAvailable = false // Reset fort availability
 	s.advanceTurnAndCheckFort(room)
+
+	// Save game state for persistence
+	s.saveGameStateAfterTurn(roomID)
+
 	return result
 }
 
@@ -952,19 +1508,15 @@ func (s *Server) HandleLootClaim(clientID string, roomID string, lootSiteID stri
 	room.mu.Lock()
 	defer room.mu.Unlock()
 
-	c, ok := room.clients[clientID]
-	if !ok {
-		return ""
-	}
-
-	currentPlayer := room.game.GetCurrentPlayer()
-	if currentPlayer == nil || currentPlayer.ID != c.ID {
-		return "It's not your turn.\n"
-	}
-
 	// Only available in continuous mode
 	if room.roomType != RoomTypeContinuous {
-		return "Loot sites are only available in 24/7 mode.\n"
+		return "Loot sites are only available in continuous mode.\n"
+	}
+
+	// Get player's own game
+	playerGame, player := s.getPlayerGame(room, clientID)
+	if playerGame == nil || player == nil {
+		return "Error: Your game state not found. Please rejoin.\n"
 	}
 
 	// Find the loot site
@@ -972,7 +1524,7 @@ func (s *Server) HandleLootClaim(clientID string, roomID string, lootSiteID stri
 		site := &room.game.LootSites[i]
 		if site.ID == lootSiteID {
 			// Check if within 50 miles
-			if room.game.Mileage < site.Mileage-50 || room.game.Mileage > site.Mileage+50 {
+			if playerGame.Mileage < site.Mileage-50 || playerGame.Mileage > site.Mileage+50 {
 				return "You're too far from that loot site.\n"
 			}
 
@@ -980,23 +1532,19 @@ func (s *Server) HandleLootClaim(clientID string, roomID string, lootSiteID stri
 				return "This wagon has already been scavenged by " + site.LootedBy + ".\n"
 			}
 
-			// Claim the loot
-			room.game.Food += site.Food
-			room.game.Bullets += site.Bullets
-			room.game.Clothing += site.Clothing
-			room.game.MiscSupplies += site.MiscSupplies
-			room.game.Cash += site.Cash
-			room.game.OxenCost += site.OxenCost
+			// Claim the loot - add to player's resources
+			playerGame.Food += site.Food
+			playerGame.Bullets += site.Bullets
+			playerGame.Clothing += site.Clothing
+			playerGame.MiscSupplies += site.MiscSupplies
+			playerGame.Cash += site.Cash
 
 			// Mark as looted
 			site.IsLooted = true
-			site.LootedBy = c.Name
-			site.LootedAt = time.Now()
+			site.LootedBy = player.Name
 
-			room.game.ClampResources()
-
-			return fmt.Sprintf("You looted %s's wagon and found: $%.0f cash, %.0f food, %.0f bullets, %.0f clothing, %.0f misc supplies!\n",
-				site.PlayerName, site.Cash, site.Food, site.Bullets, site.Clothing, site.MiscSupplies)
+			s.saveGameState()
+			return fmt.Sprintf("You scavenged the abandoned wagon of %s!\n", site.PlayerName)
 		}
 	}
 
@@ -1010,6 +1558,31 @@ func (s *Server) HandleHuntShoot(clientID string, roomID string, reactionTimeMs 
 	}
 	room.mu.Lock()
 	defer room.mu.Unlock()
+
+	// Continuous mode: get player's own game
+	if room.roomType == RoomTypeContinuous {
+		playerGame, player := s.getPlayerGame(room, clientID)
+		if playerGame == nil || player == nil {
+			return "Error: Your game state not found. Please rejoin.\n"
+		}
+		if playerGame.TurnPhase != game.PhaseHunting {
+			return "You're not hunting right now.\n"
+		}
+		result := playerGame.HandleHuntShoot(player, reactionTimeMs)
+
+		// Check for death
+		if !player.Alive {
+			s.createLootSiteFromPlayer(room, player, playerGame)
+		}
+
+		// Check for win
+		if playerGame.Win {
+			room.status = StatusFinished
+		}
+
+		s.saveGameState()
+		return result
+	}
 
 	c, ok := room.clients[clientID]
 	if !ok {
@@ -1048,6 +1621,9 @@ func (s *Server) HandleHuntShoot(clientID string, roomID string, reactionTimeMs 
 		s.advanceTurnAndCheckFort(room)
 	}
 
+	// Save game state for persistence
+	s.saveGameStateAfterTurn(roomID)
+
 	return result
 }
 
@@ -1058,6 +1634,34 @@ func (s *Server) HandleRiderTactic(clientID string, roomID string, tactic int) s
 	}
 	room.mu.Lock()
 	defer room.mu.Unlock()
+
+	// Continuous mode: get player's own game
+	if room.roomType == RoomTypeContinuous {
+		playerGame, player := s.getPlayerGame(room, clientID)
+		if playerGame == nil || player == nil {
+			return "Error: Your game state not found. Please rejoin.\n"
+		}
+		if playerGame.TurnPhase != game.PhaseRiders {
+			return "There are no riders right now.\n"
+		}
+		if tactic < 1 || tactic > 4 {
+			tactic = 3
+		}
+		result := playerGame.HandleRiderTactic(player, tactic)
+
+		// Check for death
+		if !player.Alive {
+			s.createLootSiteFromPlayer(room, player, playerGame)
+		}
+
+		// Check for win
+		if playerGame.Win {
+			room.status = StatusFinished
+		}
+
+		s.saveGameState()
+		return result
+	}
 
 	c, ok := room.clients[clientID]
 	if !ok {
@@ -1099,6 +1703,9 @@ func (s *Server) HandleRiderTactic(clientID string, roomID string, tactic int) s
 	} else {
 		s.advanceTurnAndCheckFort(room)
 	}
+
+	// Save game state for persistence
+	s.saveGameStateAfterTurn(roomID)
 
 	return result
 }
