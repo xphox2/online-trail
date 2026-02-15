@@ -2766,8 +2766,10 @@
         }
 
         function takeAction(action) {
+            console.log('takeAction called with:', action, 'ws readyState:', ws ? ws.readyState : 'no ws');
             if (!ws || ws.readyState !== WebSocket.OPEN) return;
             ws.send(JSON.stringify({ type: 'action', action: action }));
+            console.log('Action sent:', action);
         }
 
         function updateState(state) {
