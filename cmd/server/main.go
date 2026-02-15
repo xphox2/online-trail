@@ -453,6 +453,9 @@ func (s *Server) AddClient(c *Client, roomID string) {
 			newGame.Win = false
 			newGame.CurrentPlayerIdx = 0
 			newGame.TurnNumber = 1
+			newGame.TurnPhase = game.PhaseMainMenu
+			newGame.Week = 1
+			newGame.Day = 1
 
 			player := newGame.AddPlayer(c.Name, game.PlayerTypeHuman)
 			player.ID = c.ID
