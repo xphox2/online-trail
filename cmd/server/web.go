@@ -250,6 +250,10 @@ func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		if sess, ok := hub.server.sessionManager.GetSessionByID(cookie.Value); ok {
 			sessionID = sess.ID
 			playerName = sess.Name
+			// Use the stored clientID for session resumption to preserve game state
+			if sess.ClientID != "" {
+				clientID = sess.ClientID
+			}
 			if sess.RoomID != "" {
 				roomID = sess.RoomID
 			}
