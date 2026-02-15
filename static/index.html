@@ -2769,8 +2769,14 @@
         }
 
         function updateState(state) {
+            // For continuous mode, get player's own state from player_states
+            var effectiveState = state;
+            if (state.room_type === 'continuous' && state.player_states && clientId && state.player_states[clientId]) {
+                effectiveState = state.player_states[clientId];
+            }
+
             // If game was over but now isn't, we got a reset
-            if (gameIsOver && !state.game_over) {
+            if (gameIsOver && !effectiveState.game_over) {
                 gameIsOver = false;
                 myPlayerDead = false;
                 document.getElementById('game-over').classList.add('hidden');
@@ -2812,17 +2818,17 @@
             }
 
             // Animate value changes
-            animateValue('food', Math.floor(state.food));
-            animateValue('bullets', Math.floor(state.bullets));
-            animateValue('clothing', Math.floor(state.clothing));
-            animateValue('misc', Math.floor(state.misc_supplies));
+            animateValue('food', Math.floor(effectiveState.food));
+            animateValue('bullets', Math.floor(effectiveState.bullets));
+            animateValue('clothing', Math.floor(effectiveState.clothing));
+            animateValue('misc', Math.floor(effectiveState.misc_supplies));
 
-            document.getElementById('turn-number').textContent = state.turn_number;
-            document.getElementById('mileage').textContent = Math.floor(state.mileage);
-            document.getElementById('cash').textContent = '$' + Math.floor(state.cash);
-            document.getElementById('oxen').textContent = '$' + Math.floor(state.oxen_cost || 220);
+            document.getElementById('turn-number').textContent = effectiveState.turn_number;
+            document.getElementById('mileage').textContent = Math.floor(effectiveState.mileage);
+            document.getElementById('cash').textContent = '$' + Math.floor(effectiveState.cash);
+            document.getElementById('oxen').textContent = '$' + Math.floor(effectiveState.oxen_cost || 220);
 
-            var progress = Math.min(((state.mileage || 0) / 4500) * 100, 100);
+            var progress = Math.min(((effectiveState.mileage || 0) / 4500) * 100, 100);
             document.getElementById('progress-fill').style.width = progress + '%';
 
             // Update loot site markers
@@ -2846,10 +2852,16 @@
                 }
             }
 
-            isMyTurn = state.current_player_id && state.current_player_id === clientId;
+            // In continuous mode, each player has their own turn - always their turn
+            // In scheduled mode, check current_player_id
+            if (state.room_type === 'continuous') {
+                isMyTurn = !myPlayerDead && !effectiveState.game_over;
+            } else {
+                isMyTurn = effectiveState.current_player_id && effectiveState.current_player_id === clientId;
+            }
 
-            // Update turn timer
-            if (state.turn_deadline && state.game_status === 'playing' && !state.game_over) {
+            // Update turn timer (use state for deadline, effectiveState for game_over)
+            if (state.turn_deadline && state.game_status === 'playing' && !effectiveState.game_over) {
                 turnDeadline = state.turn_deadline;
                 startTurnTimer();
             } else {
@@ -2857,18 +2869,16 @@
                 stopTurnTimer();
             }
 
-            var inFortPhase = state.turn_phase === 'fort';
-            var inHuntPhase = state.turn_phase === 'hunting';
-            var inRiderPhase = state.turn_phase === 'riders';
+            var inFortPhase = effectiveState.turn_phase === 'fort';
+            var inHuntPhase = effectiveState.turn_phase === 'hunting';
+            var inRiderPhase = effectiveState.turn_phase === 'riders';
             var inOverlay = inFortPhase || inHuntPhase || inRiderPhase;
             var buttons = document.querySelectorAll('.action-btn');
 
             // Update party health — use per-player map so each client sees their own party
             var myPartyHealth = null;
-            if (state.party_health_map && state.party_health_map[clientId]) {
-                myPartyHealth = state.party_health_map[clientId];
-            } else if (state.party_health) {
-                myPartyHealth = state.party_health;
+            if (effectiveState.party_health) {
+                myPartyHealth = effectiveState.party_health;
             }
             if (myPartyHealth) {
                 updatePartyHealth(myPartyHealth);
@@ -2876,7 +2886,7 @@
 
             // Handle hunting overlay (don't show for dead spectators)
             if (inHuntPhase && isMyTurn && !myPlayerDead && huntState === 'idle') {
-                showHuntOverlay(state.hunt_word || 'BANG');
+                showHuntOverlay(effectiveState.hunt_word || 'BANG');
             } else if (!inHuntPhase) {
                 if (huntState !== 'idle') {
                     // Phase changed away from hunting — close overlay
@@ -2895,7 +2905,7 @@
 
             // Show/hide fort button based on availability
             var fortBtn = document.getElementById('btn-fort');
-            if (state.fort_available && isMyTurn && !myPlayerDead && !inOverlay) {
+            if (effectiveState.fort_available && isMyTurn && !myPlayerDead && !inOverlay) {
                 fortBtn.classList.remove('hidden');
             } else {
                 fortBtn.classList.add('hidden');
@@ -2907,7 +2917,7 @@
                     btn.disabled = true;
                     btn.classList.remove('your-turn-pulse');
                 });
-                showFortShop(state);
+                showFortShop(effectiveState);
             } else if (inFortPhase) {
                 buttons.forEach(function(btn) {
                     btn.disabled = true;
@@ -2940,15 +2950,15 @@
 
             // Show/hide spectator banner
             var spectatorBanner = document.getElementById('spectator-banner');
-            if (myPlayerDead && !state.game_over) {
+            if (myPlayerDead && !effectiveState.game_over) {
                 spectatorBanner.classList.remove('hidden');
                 var subtitle = document.getElementById('spectator-subtitle');
                 var rejoinBtn = document.getElementById('spectator-rejoin');
                 if (state.room_type === 'continuous') {
-                    subtitle.textContent = 'Your party perished at mile ' + Math.floor(state.mileage) + '. You can play again or keep spectating.';
+                    subtitle.textContent = 'Your party perished at mile ' + Math.floor(effectiveState.mileage) + '. You can play again or keep spectating.';
                     rejoinBtn.classList.remove('hidden');
                 } else {
-                    subtitle.textContent = 'Your party perished at mile ' + Math.floor(state.mileage) + '. You can still watch and chat.';
+                    subtitle.textContent = 'Your party perished at mile ' + Math.floor(effectiveState.mileage) + '. You can still watch and chat.';
                     rejoinBtn.classList.add('hidden');
                 }
                 // Show death notification card once
@@ -2966,11 +2976,11 @@
             // Update game status
             var playerCount = state.players ? state.players.length : 1;
             var statusEl = document.getElementById('game-status');
-            if (myPlayerDead && !state.game_over) {
+            if (myPlayerDead && !effectiveState.game_over) {
                 var currentName = 'Someone';
                 if (state.players) {
                     state.players.forEach(function(p) {
-                        if (p.id === state.current_player_id) currentName = p.name;
+                        if (p.id === effectiveState.current_player_id) currentName = p.name;
                     });
                 }
                 statusEl.textContent = 'Spectating \u2014 ' + currentName + '\'s turn';
@@ -2978,6 +2988,35 @@
                 statusEl.style.color = '#FF6B6B';
             } else if (state.game_status === 'waiting') {
                 statusEl.textContent = 'Waiting for game to start...';
+            } else if (state.room_type === 'continuous') {
+                // Continuous mode: each player has their own turn
+                if (effectiveState.game_over) {
+                    if (effectiveState.win) {
+                        statusEl.textContent = 'You WON! Congratulations!';
+                        statusEl.style.fontWeight = 'bold';
+                        statusEl.style.color = '#90EE90';
+                    } else {
+                        statusEl.textContent = 'Your journey has ended.';
+                        statusEl.style.fontWeight = 'normal';
+                        statusEl.style.color = '#FF6B6B';
+                    }
+                } else if (inHuntPhase) {
+                    statusEl.textContent = 'Hunting! Take aim and FIRE!';
+                    statusEl.style.fontWeight = 'bold';
+                    statusEl.style.color = '#228B22';
+                } else if (inRiderPhase) {
+                    statusEl.textContent = 'Riders spotted! Choose your tactic!';
+                    statusEl.style.fontWeight = 'bold';
+                    statusEl.style.color = '#FF4444';
+                } else if (inFortPhase) {
+                    statusEl.textContent = 'Trade Post! Browse supplies';
+                    statusEl.style.fontWeight = 'bold';
+                    statusEl.style.color = '#DAA520';
+                } else {
+                    statusEl.textContent = 'Your turn \u2014 Choose an action!';
+                    statusEl.style.fontWeight = 'bold';
+                    statusEl.style.color = '#228B22';
+                }
             } else if (inHuntPhase && isMyTurn) {
                 statusEl.textContent = 'Hunting! Take aim and FIRE!';
                 statusEl.style.fontWeight = 'bold';
@@ -2986,7 +3025,7 @@
                 var hunterName = 'A pioneer';
                 if (state.players) {
                     state.players.forEach(function(p) {
-                        if (p.id === state.current_player_id) hunterName = p.name;
+                        if (p.id === effectiveState.current_player_id) hunterName = p.name;
                     });
                 }
                 statusEl.textContent = hunterName + ' is hunting...';
@@ -3000,7 +3039,7 @@
                 var tacticName = 'A pioneer';
                 if (state.players) {
                     state.players.forEach(function(p) {
-                        if (p.id === state.current_player_id) tacticName = p.name;
+                        if (p.id === effectiveState.current_player_id) tacticName = p.name;
                     });
                 }
                 statusEl.textContent = tacticName + ' is dealing with riders...';
@@ -3014,7 +3053,7 @@
                 var shopperName = 'A pioneer';
                 if (state.players) {
                     state.players.forEach(function(p) {
-                        if (p.id === state.current_player_id) shopperName = p.name;
+                        if (p.id === effectiveState.current_player_id) shopperName = p.name;
                     });
                 }
                 statusEl.textContent = shopperName + ' is at the trade post...';
@@ -3024,7 +3063,7 @@
                 statusEl.textContent = 'Your turn \u2014 Choose an action!';
                 statusEl.style.fontWeight = 'bold';
                 statusEl.style.color = '#228B22';
-            } else if (playerCount === 1 && state.turn_number > 0) {
+            } else if (playerCount === 1 && effectiveState.turn_number > 0) {
                 statusEl.textContent = 'Solo adventurer on the trail';
                 statusEl.style.fontWeight = 'normal';
                 statusEl.style.color = '#4A2810';
@@ -3039,7 +3078,19 @@
                 var isOwner = (clientId === currentOwnerID);
                 var html = '';
                 state.players.forEach(function(p) {
-                    var isActive = p.id === state.current_player_id;
+                    // For continuous mode, get player's own mileage from player_states
+                    var playerScore = p.score;
+                    if (state.room_type === 'continuous' && state.player_states && state.player_states[p.id]) {
+                        playerScore = Math.floor(state.player_states[p.id].mileage || 0);
+                    }
+                    
+                    // In continuous mode, each player is always "active" (their own turn)
+                    var isActive = false;
+                    if (state.room_type === 'continuous') {
+                        isActive = (p.id === clientId);
+                    } else {
+                        isActive = p.id === effectiveState.current_player_id;
+                    }
                     var isDead = !p.player_alive;
                     var statusClass, statusText;
                     if (isDead) {
@@ -3055,13 +3106,13 @@
                     var rowClass = isActive && !isDead ? 'active' : '';
                     var you = p.id === clientId ? ' (You)' : '';
                     var kickHtml = '';
-                    if (isOwner && p.id !== clientId) {
+                    if (isOwner && p.id !== clientId && state.room_type !== 'continuous') {
                         kickHtml = '<button class="kick-btn" onclick="kickPlayer(\'' + p.id + '\')">Kick</button>';
                     }
                     html += '<tr class="' + rowClass + '">'
                         + '<td>' + escapeHtml(p.name) + you + '</td>'
                         + '<td class="' + statusClass + '">' + statusText + '</td>'
-                        + '<td>' + p.score + '</td>'
+                        + '<td>' + playerScore + '</td>'
                         + '<td>' + kickHtml + '</td>'
                         + '</tr>';
                 });
@@ -3069,7 +3120,7 @@
             }
 
             prevState = state;
-            if (state.game_over) showGameOver(state);
+            if (effectiveState.game_over) showGameOver(effectiveState);
         }
 
         /* -- Flash a status value green/red on change -- */
