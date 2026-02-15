@@ -1792,11 +1792,11 @@
                         <div class="game-log" id="game-log"></div>
 
                         <div class="actions">
-                            <button class="action-btn" onclick="takeAction('hunt')" id="btn-hunt" disabled>
+                            <button class="action-btn" id="btn-hunt" disabled>
                                 <span class="icon">&#x1F3F9;</span>
                                 Hunt
                             </button>
-                            <button class="action-btn" onclick="takeAction('continue')" id="btn-continue" disabled>
+                            <button class="action-btn" id="btn-continue" disabled>
                                 <span class="icon">&#x1F40E;</span>
                                 Continue
                             </button>
@@ -2771,6 +2771,16 @@
             ws.send(JSON.stringify({ type: 'action', action: action }));
             console.log('Action sent:', action);
         }
+
+        // Attach button handlers via JavaScript (not inline onclick)
+        document.getElementById('btn-hunt').addEventListener('click', function() {
+            console.log('btn-hunt CLICKED');
+            takeAction('hunt');
+        });
+        document.getElementById('btn-continue').addEventListener('click', function() {
+            console.log('btn-continue CLICKED');
+            takeAction('continue');
+        });
 
         // Global error handler
         window.onerror = function(msg, url, line) {
