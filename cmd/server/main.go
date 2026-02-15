@@ -1340,6 +1340,12 @@ func (s *Server) handleContinuousAction(room *GameRoom, clientID string, action 
 			player.Name, playerGame.Mileage, playerGame.Week)
 	}
 
+	// In continuous mode, each player has their own turn - increment TurnNumber after action
+	// Only if not in an interactive phase (hunt/fort/riders will increment when they complete)
+	if playerGame.TurnPhase == game.PhaseMainMenu {
+		playerGame.NextTurn()
+	}
+
 	// Check for win
 	if playerGame.Win {
 		log.Printf("Continuous: player %s WON at Mileage %.0f!", player.Name, playerGame.Mileage)
@@ -1478,6 +1484,8 @@ func (s *Server) HandleFortLeave(clientID string, roomID string) string {
 		}
 		result := playerGame.HandleFortLeave()
 		playerGame.FortAvailable = false
+		// Increment turn after leaving fort
+		playerGame.NextTurn()
 		s.saveGameState()
 		return result
 	}
@@ -1578,6 +1586,9 @@ func (s *Server) HandleHuntShoot(clientID string, roomID string, reactionTimeMs 
 			s.createLootSiteFromPlayer(room, player, playerGame)
 		}
 
+		// Increment turn after hunt completes
+		playerGame.NextTurn()
+
 		// Check for win
 		if playerGame.Win {
 			room.status = StatusFinished
@@ -1656,6 +1667,9 @@ func (s *Server) HandleRiderTactic(clientID string, roomID string, tactic int) s
 		if !player.Alive {
 			s.createLootSiteFromPlayer(room, player, playerGame)
 		}
+
+		// Increment turn after rider tactic is resolved
+		playerGame.NextTurn()
 
 		// Check for win
 		if playerGame.Win {
