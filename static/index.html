@@ -2799,9 +2799,11 @@
                 ]);
             }
 
-            // Detect if my player is dead
+            // Detect if my player is dead - use effectiveState for continuous mode
             var wasAlive = !myPlayerDead;
-            if (state.players) {
+            if (state.room_type === 'continuous' && effectiveState) {
+                myPlayerDead = !effectiveState.player_alive;
+            } else if (state.players) {
                 state.players.forEach(function(p) {
                     if (p.id === clientId) {
                         myPlayerDead = !p.player_alive;
