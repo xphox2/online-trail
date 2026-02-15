@@ -2771,10 +2771,13 @@
         }
 
         function updateState(state) {
+            console.log('updateState called', state.room_type, state.turn_phase);
+            
             // For continuous mode, get player's own state from player_states
             var effectiveState = state;
             if (state.room_type === 'continuous' && state.player_states && clientId && state.player_states[clientId]) {
                 effectiveState = state.player_states[clientId];
+                console.log('Using effectiveState for client', clientId, ':', effectiveState.turn_phase, effectiveState.turn_number);
             }
 
             // If game was over but now isn't, we got a reset
@@ -2940,6 +2943,7 @@
                 buttons.forEach(function(btn) {
                     // Don't disable the fort button here (it's handled separately)
                     if (btn.id !== 'btn-fort') {
+                        console.log('Button', btn.id, 'isMyTurn=', isMyTurn, 'myPlayerDead=', myPlayerDead);
                         btn.disabled = !isMyTurn || myPlayerDead;
                         if (isMyTurn && !myPlayerDead) btn.classList.add('your-turn-pulse');
                         else btn.classList.remove('your-turn-pulse');
